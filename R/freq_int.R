@@ -1,12 +1,12 @@
 freq_int <- function(name,
                      covar,
                      coefs,
-                     numbers,
                      vals,
                      use_range_only,
                      range_size,
                      alpha = 0.05,
                      round_res = 3,
+                     control_fdr,
                      sig_color_2 = 'seagreen3',
                      non_sig_color_2 = 'chocolate',
                      line_color_2 = 'black',
@@ -19,6 +19,13 @@ freq_int <- function(name,
                      grid_spacing = 0.1,
                      crosshatch_non_sig = TRUE
                      ) {
+  
+  
+  library(ggplot2)
+  library(ggpattern)
+  library(tidyverse)
+  library(scales)
+  
   k <- length(name)
   if (use_range_only) {
     for (var in 1:k) {
@@ -139,7 +146,7 @@ freq_int <- function(name,
           
           plots[[i]] <- plots[[i]] + 
             geom_ribbon(data = td[[i]][1:(first_true - 1),],
-                        aes(ymin = -abs(qnorm(alpha / 2)) * theta_se
+                        aes(ymin = -abs(qnorm(alpha / 2)) * theta_se +
                             theta_vals,
                             ymax =  abs(qnorm(alpha / 2)) * theta_se +
                               theta_vals),
