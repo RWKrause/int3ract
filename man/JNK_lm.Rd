@@ -77,12 +77,12 @@ dat <- data.frame(y = rnorm(100),
 
 res <- lm(y ~ x * z * w,dat)
 
-x2  <- JN.lm(res,
+x2  <- JNK_lm(res,
              theta1 = 'x',
              theta2 = 'z')
 x2$plots$z
 
-x3  <- JN.lm(res,
+x3  <- JNK_lm(res,
              theta1 = 'x',
              theta2 = 'z',
              theta3 = 'w')
