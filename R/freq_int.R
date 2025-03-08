@@ -20,8 +20,7 @@
 #' @param grid_spacing see JNK_lm() or JNK_siena()
 #' @param crosshatch_non_sig see JNK_lm() or JNK_siena()
 #'
-#' @returns
-#' @export
+#' @returns Returns tables and plots for interactions
 #' 
 #' @import ggplot2
 #' @import ggpattern

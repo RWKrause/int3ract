@@ -1,0 +1,22 @@
+Package: int3ract
+Type: Package
+Title: Plotting two- and three-way interactions
+Version: 0.1.0
+Authors@R: c(
+    person(
+      "Robert W.", "Krause",
+      email = "robert.w.krause@uky.edu",
+      role = c("aut", "cre")
+    )
+  )
+Description: This package contains functions to provide two- and three-way Johnson-Neyman plots.
+License: GPL-3.0
+Encoding: UTF-8
+LazyData: true
+Imports:
+  tibble,
+  tidyr,
+  ggplot2,
+  ggpattern,
+  scales
+RoxygenNote: 7.3.2

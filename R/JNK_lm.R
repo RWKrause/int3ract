@@ -14,7 +14,7 @@
 #' @param color_mid character; sets color for \code{0} value in 3-way plot
 #' @param color_low character; sets color for negative value in 3-way plot
 #' @param color_high character; sets color for positive values in 3-way plot
-#' @param color_grid character; sets color of color of grid 
+#' @param color_grid character; sets color of grid 
 #' @param grid_density numeric; sets density of grid 
 #' @param grid_spacing numeric; sets spacing of grid 
 #' @param crosshatch_non_sig logical; should insignificant area be hashed out? If FALSE, significant area will be hashed instead.
@@ -23,6 +23,25 @@
 #' @export
 #'
 #' @examples
+#' \dontrun{
+#' dat <- data.frame(y = rnorm(100),
+#'                   x = rnorm(100),
+#'                   z = rnorm(100),
+#'                   w = rnorm(100))
+#' 
+#' res <- lm(y ~ x * z * w,dat)
+#' 
+#' x2  <- JN.lm(res,
+#'              theta1 = 'x',
+#'              theta2 = 'z')
+#' x2$plots$z
+#' 
+#' x3  <- JN.lm(res,
+#'              theta1 = 'x',
+#'              theta2 = 'z',
+#'              theta3 = 'w')
+#' x3$plots$z
+#' }
 JNK_lm <- function(modelOut, 
                   theta1,
                   theta2, 
