@@ -1,4 +1,4 @@
-JN.sienaFit <- function(siena07out, 
+JNK_sienaFit <- function(sienaFit, 
                         theta1,
                         theta2, 
                         theta3 = NULL,
@@ -14,9 +14,9 @@ JN.sienaFit <- function(siena07out,
                         control_fdr = FALSE,
                         alpha = 0.05,
                         round_res = 3,
-                        sig_color_2 = 'seagreen3',
-                        non_sig_color_2 = 'chocolate',
-                        line_color_2 = 'black',
+                        sig_color = 'seagreen3',
+                        non_sig_color = 'chocolate',
+                        line_color = 'black',
                         color_mid = 'white',
                         color_low = '#F05039',
                         color_high = '#000066',
@@ -25,8 +25,8 @@ JN.sienaFit <- function(siena07out,
                         grid_density = 0.01,
                         grid_spacing = 0.1,
                         crosshatch_non_sig = TRUE) { 
-
-  sn <- modelOut$effects$effectName
+  
+  sn <- sienaFit$effects$effectName
   
   if (any(c(theta1 ,theta2, theta3, thetaInt12, thetaInt13, thetaInt23, 
             thetaInt123) > length(sn))) {
@@ -44,22 +44,30 @@ JN.sienaFit <- function(siena07out,
   }
   
   
-  covT <- modelOut$covtheta
+  covT <- sienaFit$covtheta
   
   if (is.null(theta3)) {
     vals <- list(theta1vals, theta2vals)
-    coefs <- c(modelOut$theta[theta1],
-               modelOut$theta[theta2])
+    coefs <- c(sienaFit$theta[theta1],
+               sienaFit$theta[theta2],
+               sienaFit$theta[thetaInt12])
     name <- c(sn[theta1],sn[theta2])
-    covar <- covT[theta1,theta2,thetaInt12]
+    covar <- covT[c(theta1,theta2,thetaInt12),
+                  c(theta1,theta2,thetaInt12)]
   } else {
     vals <- list(theta1vals, theta2vals, theta3vals)
-    coefs <- c(modelOut$theta[theta1],
-               modelOut$theta[theta2],
-               modelOut$theta[theta3])
+    coefs <- c(sienaFit$theta[theta1],
+               sienaFit$theta[theta2],
+               sienaFit$theta[theta3],
+               sienaFit$theta[thetaInt12],
+               sienaFit$theta[thetaInt13],
+               sienaFit$theta[thetaInt23],
+               sienaFit$theta[thetaInt123])
     name <- c(sn[theta1],sn[theta2],sn[theta3])
-    covar <- covT[theta1,theta2,theta3,thetaInt12,
-                  thetaInt13,thetaInt23,thetaInt123]
+    covar <- covT[c(theta1,theta2,theta3,thetaInt12,
+                    thetaInt13,thetaInt23,thetaInt123),
+                  c(theta1,theta2,theta3,thetaInt12,
+                    thetaInt13,thetaInt23,thetaInt123)]
   }
   
   
@@ -67,14 +75,13 @@ JN.sienaFit <- function(siena07out,
            covar = covar,
            coefs = coefs,
            vals = vals,
-           use_range_only = use_range_only,
            range_size = range_size,
            alpha = alpha,
            control_fdr = control_fdr,
            round_res = round_res,
-           sig_color_2 = sig_color_2,
-           non_sig_color_2 = non_sig_color_2,
-           line_color_2 = line_color_2,
+           sig_color = sig_color,
+           non_sig_color = non_sig_color,
+           line_color = line_color,
            color_mid = color_mid,
            color_low = color_low,
            color_high = color_high,

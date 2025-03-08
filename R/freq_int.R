@@ -1,15 +1,45 @@
+#' Internal frequentist interaction finction
+#'
+#' @param name charachter; names of the variables involved in interaction
+#' @param covar matrix; covariance of relevant parameters
+#' @param coefs numeric; vector of coefficient values
+#' @param vals list; values of the variables
+#' @param alpha see JNK_lm() or JNK_siena()
+#' @param round_res see JNK_lm() or JNK_siena()
+#' @param control_fdr see JNK_lm() or JNK_siena()
+#' @param range_size see JNK_lm() or JNK_siena()
+#' @param sig_color see JNK_lm() or JNK_siena()
+#' @param non_sig_color see JNK_lm() or JNK_siena()
+#' @param line_color see JNK_lm() or JNK_siena()
+#' @param color_mid see JNK_lm() or JNK_siena()
+#' @param color_low see JNK_lm() or JNK_siena()
+#' @param color_high see JNK_lm() or JNK_siena()
+#' @param color_values see JNK_lm() or JNK_siena()
+#' @param color_grid see JNK_lm() or JNK_siena()
+#' @param grid_density see JNK_lm() or JNK_siena()
+#' @param grid_spacing see JNK_lm() or JNK_siena()
+#' @param crosshatch_non_sig see JNK_lm() or JNK_siena()
+#'
+#' @returns
+#' @export
+#' 
+#' @import ggplot2
+#' @import ggpattern
+#' @import scales
+#' @import tidyr
+#' @import tibble
+#' 
 freq_int <- function(name,
                      covar,
                      coefs,
                      vals,
-                     use_range_only,
                      range_size,
                      alpha = 0.05,
                      round_res = 3,
-                     control_fdr,
-                     sig_color_2 = 'seagreen3',
-                     non_sig_color_2 = 'chocolate',
-                     line_color_2 = 'black',
+                     control_fdr = FALSE,
+                     sig_color = 'seagreen3',
+                     non_sig_color = 'chocolate',
+                     line_color = 'black',
                      color_mid = 'white',
                      color_low = '#F05039',
                      color_high = '#000066',
@@ -27,21 +57,19 @@ freq_int <- function(name,
   library(scales)
   
   k <- length(name)
-  if (use_range_only) {
-    for (var in 1:k) {
-      vals[[var]] <- seq(min(vals[[var]], na.rm = TRUE), 
-                         max(vals[[var]], na.rm = TRUE),
-                         length.out = range_size)
-    }
+  for (var in 1:k) {
+    vals[[var]] <- seq(min(vals[[var]], nam = TRUE), 
+                       max(vals[[var]], nam = TRUE),
+                       length.out = range_size)
   }
-  
+
   td <- list()
   if (length(vals) == 2) {
     for (var in 1:k) {
       theta1s <- coefs[var] + coefs[3] * vals[[c(1:k)[-var]]]
       seT1 <- sqrt(covar[var,var] + 
-                     vals[[c(1:k)[-var]]] * 2 * covT[c(1:k)[-var],var] + 
-                     vals[[c(1:k)[-var]]] ^ 2 * covT[3,3])
+                     vals[[c(1:k)[-var]]] * 2 * covar[c(1:k)[-var],var] + 
+                     vals[[c(1:k)[-var]]] ^ 2 * covar[3,3])
       z1 <- theta1s/seT1
       p1 <- c()
       for (i in 1:length(vals[[c(1:k)[-var]]])) {
@@ -97,7 +125,7 @@ freq_int <- function(name,
                             theta_vals,
                           ymax =  abs(qnorm(alpha / 2)) * theta_se + 
                             theta_vals),
-                      fill = non_sig_color_2,
+                      fill = non_sig_color,
                       alpha = 0.7)
       } else if (all(td[[i]]$sig)) {
         plots[[i]] <- plots[[i]] + 
@@ -105,7 +133,7 @@ freq_int <- function(name,
                             theta_vals,
                           ymax =  abs(qnorm(alpha / 2)) * theta_se +
                             theta_vals),
-                      fill = sig_color_2,
+                      fill = sig_color,
                       alpha = 0.7)
       } else {
         nvals <- nrow(td[[i]])
@@ -120,14 +148,14 @@ freq_int <- function(name,
                               theta_vals,
                             ymax =  abs(qnorm(alpha / 2)) * theta_se +
                               theta_vals),
-                        fill = sig_color_2,
+                        fill = sig_color,
                         alpha = 0.7) + 
             geom_ribbon(data = td[[i]][first_false:last_false,],
                         aes(ymin = -abs(qnorm(alpha / 2)) * theta_se +
                               theta_vals,
                             ymax =  abs(qnorm(alpha / 2)) * theta_se +
                               theta_vals),
-                        fill = non_sig_color_2,
+                        fill = non_sig_color,
                         alpha = 0.7)
           if (td[[i]]$sig[nvals]) {
             plots[[i]] <- plots[[i]] + 
@@ -136,7 +164,7 @@ freq_int <- function(name,
                                 theta_vals,
                               ymax =  abs(qnorm(alpha / 2)) * theta_se +
                                 theta_vals),
-                          fill = sig_color_2,
+                          fill = sig_color,
                           alpha = 0.7)
           }
         } else {
@@ -150,14 +178,14 @@ freq_int <- function(name,
                             theta_vals,
                             ymax =  abs(qnorm(alpha / 2)) * theta_se +
                               theta_vals),
-                        fill = non_sig_color_2,
+                        fill = non_sig_color,
                         alpha = 0.7) + 
             geom_ribbon(data = td[[i]][first_true:last_true,],
                         aes(ymin = -abs(qnorm(alpha / 2)) * theta_se +
                               theta_vals,
                             ymax =  abs(qnorm(alpha / 2)) * theta_se +
                               theta_vals),
-                        fill = sig_color_2,
+                        fill = sig_color,
                         alpha = 0.7)
           if (!td[[i]]$sig[nvals]) {
             plots[[i]] <- plots[[i]] + 
@@ -166,19 +194,18 @@ freq_int <- function(name,
                                 theta_vals,
                               ymax =  abs(qnorm(alpha / 2)) * theta_se +
                                 theta_vals),
-                          fill = non_sig_color_2,
+                          fill = non_sig_color,
                           alpha = 0.7)
           }
         }
       }
       plots[[i]] <- plots[[i]] +  
-        geom_path(linewidth = 1, color = line_color_2) 
+        geom_path(linewidth = 1, color = line_color) 
     }
     
     
     
-    return_list <- list(td = td,
-                        plots = plots)
+    return_list <- list(param_table = td,  plots = plots)
     
   } else {
     thetaMat <- vector(mode = 'list', length = 3)
@@ -240,21 +267,18 @@ freq_int <- function(name,
     
     seMat[[3]] <- outer(vals[[1]],vals[[2]],
                         seFun,
-                        Vx           = covT[3,3],
-                        Vm1x         = covT[5,5],
-                        Vm2x         = covT[6,6],
-                        Vm1m2x       = covT[7,7],
-                        covX_m1x     = covT[3,5],
-                        covX_m2x     = covT[3,6],
-                        covX_m1m2x   = covT[3,7],
-                        covm1x_m2x   = covT[5,6],
-                        covm1x_m1m2x = covT[5,7],
-                        covm2x_m1m2x = covT[6,7])
+                        Vx           = covar[3,3],
+                        Vm1x         = covar[5,5],
+                        Vm2x         = covar[6,6],
+                        Vm1m2x       = covar[7,7],
+                        covX_m1x     = covar[3,5],
+                        covX_m2x     = covar[3,6],
+                        covX_m1m2x   = covar[3,7],
+                        covm1x_m2x   = covar[5,6],
+                        covm1x_m1m2x = covar[5,7],
+                        covm2x_m1m2x = covar[6,7])
     
-    ns <- list(theta1n,theta2n,theta3n)
     for (i in 1:3) {
-      #naming with parameter name might interfere with plot
-      # thus only values so far, otherwise:paste(ns[-i][[1]],vals[-i][[1]]) 
       row.names(thetaMat[[i]]) <- row.names(seMat[[i]]) <- vals[-i][[1]]
       colnames(thetaMat[[i]])  <- colnames(seMat[[i]])  <- vals[-i][[2]]
       ZMat[[i]]   <- thetaMat[[i]] / seMat[[i]]
@@ -299,15 +323,15 @@ freq_int <- function(name,
                           pattern_spacing = grid_spacing,
                           pattern_color = color_grid,
                           alpha = 0) +
-        ggtitle(ns[i]) +
+        ggtitle(name[i]) +
         theme_bw() +
         guides(pattern = "none") + 
-        xlab(ns[-i][[1]]) +
-        ylab(ns[-i][[2]])
+        xlab(name[-i][1]) +
+        ylab(name[-i][2])
       
-      if (all(c(length(theta1Vals) < 8,
-                length(theta3Vals) < 8,
-                length(theta2Vals) < 8))) {
+      if (all(c(length(vals[[1]]) < 8,
+                length(vals[[2]]) < 8,
+                length(vals[[3]]) < 8))) {
         
         figures[[i]] <- figures[[i]] + geom_text(aes(
           label = round(`Parameter Value`, round_res)),
@@ -322,5 +346,4 @@ freq_int <- function(name,
                         plots = figures)
   }
   return(return_list)
-  
 }
