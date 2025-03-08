@@ -268,3 +268,138 @@ covariance/correlation matrix of X can be found using
 summary(ans) within R, or by using the 'verbose' option in Siena07.
  
 Total computation time 77.63 seconds.
+
+
+-----------------------------------
+New Analysis started.
+Date and time: 08/03/2025 01:09:04
+New results follow.
+-----------------------------------
+
+RSiena version 1.4.21 (12 Dez 24)
+
+
+@1
+Estimation by stochastic approximation algorithm.
+=================================================
+
+Current random number seed is 1402.
+Effects object used: first.model 
+Model Type:
+ Standard actor-oriented model 
+Estimation method: unconditional moment estimation
+.
+
+Time duration for simulations in each period is 1.0.
+Standard errors are estimated with the likelihood ratio method.
+Dolby method (regression on scores) is used.
+Initial value of gain parameter is  0.6324555.
+Reduction factor for gain parameter is  0.5000000.
+Number of subphases in Phase 2 is 4.
+
+Initial parameter values are 
+  1. rate:  constant friendship rate (period 1)                 4.6960
+  2. rate:  constant friendship rate (period 2)                 4.3288
+  3. eval:  outdegree (density)                                -1.4677
+  4. eval:  reciprocity                                         0.0000
+  5. eval:  transitive triplets (1)                             0.0000
+  6. eval:  smoke alter                                         0.0000
+  7. eval:  smoke ego                                           0.0000
+  8. eval:  smoke ego x smoke alter                             0.0000
+  9. eval:  smoke ego x transitive triplets (1)                 0.0000
+ 10. eval:  smoke alter x transitive triplets (1)               0.0000
+ 11. eval:  smoke ego x smoke alter x transitive triplets (1)   0.0000
+
+
+Values of target statistics are
+  1. Amount of network change in period 1                               115.0000
+  2. Amount of network change in period 2                               106.0000
+  3. Number of ties                                                     238.0000
+  4. Number of reciprocated ties                                        160.0000
+  5. Number of transitive triplets                                      225.0000
+  6. Sum indegrees x smoke                                               -4.1000
+  7. Sum outdegrees x smoke                                              -4.1000
+  8. Sum smoke ego x smoke alter                                         42.4950
+  9. smoke ego x transitive triplets (1)                                 -9.2500
+ 10. smoke alter x transitive triplets (1)                                1.7500
+ 11. smoke ego x smoke alter x transitive triplets (1)                   28.8125
+These were calculated from the data.
+
+ 11 parameters, 11 statistics
+
+Estimation of derivatives by the LR method (type 1).
+
+
+@2
+End of stochastic approximation algorithm, phase 3.
+---------------------------------------------------
+
+Total of 50554 iterations.
+Parameter estimates based on 554 iterations,
+convergence diagnostics, covariance and derivative matrices based on 50000 iterations.
+
+Information for convergence diagnosis.
+Averages, standard deviations, and t-ratios for deviations from targets:
+  1.  -0.5022  10.5153  -0.0478 
+  2.  -0.3377   9.3559  -0.0361 
+  3.  -0.8958  22.8034  -0.0393 
+  4.  -0.4859  20.1536  -0.0241 
+  5.  -1.2600  72.7543  -0.0173 
+  6.   0.3892  13.1629   0.0296 
+  7.   0.0446  12.0277   0.0037 
+  8.  -0.6693  10.9056  -0.0614 
+  9.   0.2444  29.3719   0.0083 
+ 10.   0.6078  32.9924   0.0184 
+ 11.  -1.4936  18.7212  -0.0798 
+
+Good convergence is indicated by the t-ratios being close to zero.
+
+Overall maximum convergence ratio =  0.1186 .
+
+
+
+@2
+Estimation Results.
+-------------------
+
+Regular end of estimation algorithm.
+Total of 50554 iteration steps.
+
+
+@3
+Estimates and standard errors
+                             
+ 1. rate:  constant friendship rate (period 1)                     6.4803  (   1.0845)
+ 2. rate:  constant friendship rate (period 2)                     5.2027  (   0.8764)
+ 3. eval:  outdegree (density)                                    -2.7494  (   0.1333)
+ 4. eval:  reciprocity                                             2.5703  (   0.1925)
+ 5. eval:  transitive triplets (1)                                 1.2404  (   0.1610)
+ 6. eval:  smoke alter                                            -0.1252  (   0.1499)
+ 7. eval:  smoke ego                                               0.0177  (   0.1535)
+ 8. eval:  smoke ego x smoke alter                                 0.3507  (   0.1556)
+ 9. eval:  smoke ego x transitive triplets (1)                    -0.0625  (   0.2476)
+10. eval:  smoke alter x transitive triplets (1)                   0.2193  (   0.2310)
+11. eval:  smoke ego x smoke alter x transitive triplets (1)      -0.3469  (   0.3353)
+
+
+@3
+Covariance matrices
+                   
+Covariance matrix of estimates (correlations below diagonal):
+     1.176     -0.067      0.017     -0.002     -0.027      0.004      0.002     -0.018     -0.009     -0.007      0.036
+    -0.070      0.768      0.012     -0.010     -0.019      0.006     -0.004     -0.011      0.003     -0.013      0.027
+     0.120      0.103      0.018     -0.017     -0.013      0.003      0.000     -0.006     -0.001     -0.004      0.010
+    -0.008     -0.061     -0.647      0.037      0.003     -0.001      0.001      0.001     -0.001      0.003     -0.003
+    -0.154     -0.134     -0.594      0.098      0.026     -0.003     -0.001      0.007      0.005      0.004     -0.019
+     0.027      0.047      0.163     -0.048     -0.133      0.022     -0.008     -0.008      0.005     -0.025      0.012
+     0.012     -0.030      0.008      0.042     -0.036     -0.344      0.024     -0.004     -0.025      0.007      0.006
+    -0.106     -0.079     -0.283      0.018      0.287     -0.348     -0.172      0.024      0.007      0.010     -0.037
+    -0.034      0.014     -0.032     -0.020      0.120      0.143     -0.664      0.181      0.061     -0.010     -0.023
+    -0.027     -0.063     -0.141      0.070      0.107     -0.708      0.187      0.268     -0.167      0.053     -0.020
+     0.099      0.094      0.223     -0.044     -0.350      0.241      0.126     -0.710     -0.279     -0.256      0.112
+
+Derivative matrix of expected statistics X by parameters and
+covariance/correlation matrix of X can be found using
+summary(ans) within R, or by using the 'verbose' option in Siena07.
+ 
+Total computation time 79.92 seconds.

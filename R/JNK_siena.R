@@ -41,7 +41,7 @@
 #' 
 #' smoke <- varCovar(s50s[,1:2],centered = TRUE)
 #' 
-#' netDynamics <- sienaDataCreate(friendship,smoke,alcohol)
+#' netDynamics <- sienaDataCreate(friendship,smoke)
 #' 
 #' first.model <- getEffects(netDynamics)
 #' first.model <- includeEffects(first.model,
@@ -70,58 +70,58 @@
 #'                nbrNodes = 10,
 #'                useCluster = TRUE)
 #' 
-#' x2 <- JNK_sienaFit(res,
-#'                    theta1 = 6,
-#'                    theta2 = 7, 
-#'                    thetaInt12 = 8,
-#'                    theta1vals = c(-10:10), 
-#'                    theta2vals = c(-10:10))
+#' x2 <- JNK_siena(res,
+#'                 theta1 = 6,
+#'                 theta2 = 7, 
+#'                 thetaInt12 = 8,
+#'                 theta1vals = c(-10:10), 
+#'                 theta2vals = c(-10:10))
 #' 
 #' x2$plots$`smoke alter`
 #' 
-#' x3 <- JNK_sienaFit(res,
-#'                    theta1 = 6,
-#'                    theta2 = 7, 
-#'                    theta3 = 5, 
-#'                    thetaInt12 = 8,
-#'                    thetaInt13 = 10,
-#'                    thetaInt23 = 9,
-#'                    thetaInt123 = 11,
-#'                    theta1vals = c(-10:10), 
-#'                    theta2vals = c(-10:10), 
-#'                    theta3vals = c(0:6),
-#'                    range_size = 10)
+#' x3 <- JNK_siena(res,
+#'                 theta1 = 6,
+#'                 theta2 = 7, 
+#'                 theta3 = 5, 
+#'                 thetaInt12 = 8,
+#'                 thetaInt13 = 10,
+#'                 thetaInt23 = 9,
+#'                 thetaInt123 = 11,
+#'                 theta1vals = c(-10:10), 
+#'                 theta2vals = c(-10:10), 
+#'                 theta3vals = c(0:6),
+#'                 range_size = 10)
 #' 
 #' x3$plots$`smoke alter`
 #' }
 #' 
-JNK_modelOut <- function(modelOut, 
-                         theta1,
-                         theta2, 
-                         theta3 = NULL,
-                         thetaInt12 = NULL, 
-                         thetaInt13 = NULL,
-                         thetaInt23 = NULL,
-                         thetaInt123 = NULL, 
-                         theta1vals = NULL, 
-                         theta2vals = NULL,  
-                         theta3vals = NULL, 
-                         use_range_only = TRUE,
-                         range_size = 500,
-                         control_fdr = FALSE,
-                         alpha = 0.05,
-                         round_res = 3,
-                         sig_color = 'seagreen3',
-                         non_sig_color = 'chocolate',
-                         line_color = 'black',
-                         color_mid = 'white',
-                         color_low = '#F05039',
-                         color_high = '#000066',
-                         color_values = 'grey40',
-                         color_grid = 'black',
-                         grid_density = 0.01,
-                         grid_spacing = 0.1,
-                         crosshatch_non_sig = TRUE) { 
+JNK_siena <- function(modelOut, 
+                      theta1,
+                      theta2, 
+                      theta3 = NULL,
+                      thetaInt12 = NULL, 
+                      thetaInt13 = NULL,
+                      thetaInt23 = NULL,
+                      thetaInt123 = NULL, 
+                      theta1vals = NULL, 
+                      theta2vals = NULL,  
+                      theta3vals = NULL, 
+                      use_range_only = TRUE,
+                      range_size = 500,
+                      control_fdr = FALSE,
+                      alpha = 0.05,
+                      round_res = 3,
+                      sig_color = 'seagreen3',
+                      non_sig_color = 'chocolate',
+                      line_color = 'black',
+                      color_mid = 'white',
+                      color_low = '#F05039',
+                      color_high = '#000066',
+                      color_values = 'grey40',
+                      color_grid = 'black',
+                      grid_density = 0.01,
+                      grid_spacing = 0.1,
+                      crosshatch_non_sig = TRUE) { 
   
   sn <- modelOut$effects$effectName
   
