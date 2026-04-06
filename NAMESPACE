@@ -2,6 +2,8 @@
 
 export(JNK_lm)
 export(JNK_siena)
+export(JNSienaBayes)
+import(dplyr)
 import(ggpattern)
 import(ggplot2)
 import(scales)
