@@ -2,10 +2,11 @@ Package: int3ract
 Type: Package
 Title: Plotting two- and three-way interactions
 Version: 0.1.0
+Date: 2026-04-07
 Authors@R: c(
     person(
       "Robert W.", "Krause",
-      email = "robert.w.krause@uky.edu",
+      email = "robert.w.krause@mailbox.org",
       role = c("aut", "cre")
     )
   )
