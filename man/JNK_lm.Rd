@@ -6,9 +6,9 @@
 \usage{
 JNK_lm(
   modelOut,
-  theta1,
-  theta2,
-  theta3 = NULL,
+  theta_1,
+  theta_2,
+  theta_3 = NULL,
   control_fdr = FALSE,
   alpha = 0.05,
   round_res = 3,
@@ -28,11 +28,11 @@ JNK_lm(
 \arguments{
 \item{modelOut}{lm or glm output}
 
-\item{theta1}{character; name of the first variable involved in the interaction}
+\item{theta_1}{character; name of the first variable involved in the interaction}
 
-\item{theta2}{character; name of the second variable involved in the interaction}
+\item{theta_2}{character; name of the second variable involved in the interaction}
 
-\item{theta3}{character; name of the third variable involved in the interaction}
+\item{theta_3}{character; name of the third variable involved in the interaction}
 
 \item{control_fdr}{logical; should Bonferroni-Holms correction be used}
 
@@ -78,14 +78,14 @@ dat <- data.frame(y = rnorm(100),
 res <- lm(y ~ x * z * w,dat)
 
 x2  <- JNK_lm(res,
-             theta1 = 'x',
-             theta2 = 'z')
+             theta_1 = 'x',
+             theta_2 = 'z')
 x2$plots$z
 
 x3  <- JNK_lm(res,
-             theta1 = 'x',
-             theta2 = 'z',
-             theta3 = 'w')
+             theta_1 = 'x',
+             theta_2 = 'z',
+             theta_3 = 'w')
 x3$plots$z
 }
 }

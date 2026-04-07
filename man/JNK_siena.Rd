@@ -6,16 +6,16 @@
 \usage{
 JNK_siena(
   modelOut,
-  theta1,
-  theta2,
-  theta3 = NULL,
-  thetaInt12 = NULL,
-  thetaInt13 = NULL,
-  thetaInt23 = NULL,
-  thetaInt123 = NULL,
-  theta1vals = NULL,
-  theta2vals = NULL,
-  theta3vals = NULL,
+  theta_1,
+  theta_2,
+  theta_3 = NULL,
+  theta_int_12 = NULL,
+  theta_int_13 = NULL,
+  theta_int_23 = NULL,
+  theta_int_123 = NULL,
+  theta_1vals = NULL,
+  theta_2vals = NULL,
+  theta_3vals = NULL,
   use_range_only = TRUE,
   range_size = 500,
   control_fdr = FALSE,
@@ -37,25 +37,25 @@ JNK_siena(
 \arguments{
 \item{modelOut}{}
 
-\item{theta1}{integer; number of the first parameter involved in the interaction}
+\item{theta_1}{integer; number of the first parameter involved in the interaction}
 
-\item{theta2}{integer; number of the second parameter involved in the interaction}
+\item{theta_2}{integer; number of the second parameter involved in the interaction}
 
-\item{theta3}{integer; number of the third parameter involved in the interaction}
+\item{theta_3}{integer; number of the third parameter involved in the interaction}
 
-\item{thetaInt12}{integer; number of the interaction between the first and second parameter}
+\item{theta_int_12}{integer; number of the interaction between the first and second parameter}
 
-\item{thetaInt13}{integer; number of the interaction between the first and third parameter}
+\item{theta_int_13}{integer; number of the interaction between the first and third parameter}
 
-\item{thetaInt23}{integer; number of the interaction between the second and third parameter}
+\item{theta_int_23}{integer; number of the interaction between the second and third parameter}
 
-\item{thetaInt123}{integer; number of the 3-way interaction}
+\item{theta_int_123}{integer; number of the 3-way interaction}
 
-\item{theta1vals}{numeric; change statistic values for the first parameter}
+\item{theta_1vals}{numeric; change statistic values for the first parameter}
 
-\item{theta2vals}{numeric; change statistic values for the second parameter}
+\item{theta_2vals}{numeric; change statistic values for the second parameter}
 
-\item{theta3vals}{numeric; change statistic values for the third parameter}
+\item{theta_3vals}{numeric; change statistic values for the third parameter}
 
 \item{range_size}{integer; number of calculated parameter combinations. Default for 2-way is 1000, default for 3-way is 50. Note that for 3-way \code{range_size^2} values will be calculated.}
 
@@ -134,25 +134,25 @@ res <- siena07(estimation.options,
                useCluster = TRUE)
 
 x2 <- JNK_siena(res,
-                theta1 = 6,
-                theta2 = 7, 
-                thetaInt12 = 8,
-                theta1vals = c(-10:10), 
-                theta2vals = c(-10:10))
+                theta_1 = 6,
+                theta_2 = 7, 
+                theta_int_12 = 8,
+                theta_1vals = c(-10:10), 
+                theta_2vals = c(-10:10))
 
 x2$plots$`smoke alter`
 
 x3 <- JNK_siena(res,
-                theta1 = 6,
-                theta2 = 7, 
-                theta3 = 5, 
-                thetaInt12 = 8,
-                thetaInt13 = 10,
-                thetaInt23 = 9,
-                thetaInt123 = 11,
-                theta1vals = c(-10:10), 
-                theta2vals = c(-10:10), 
-                theta3vals = c(0:6),
+                theta_1 = 6,
+                theta_2 = 7, 
+                theta_3 = 5, 
+                theta_int_12 = 8,
+                theta_int_13 = 10,
+                theta_int_23 = 9,
+                theta_int_123 = 11,
+                theta_1vals = c(-10:10), 
+                theta_2vals = c(-10:10), 
+                theta_3vals = c(0:6),
                 range_size = 10)
 
 x3$plots$`smoke alter`

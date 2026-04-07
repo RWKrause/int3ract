@@ -1,16 +1,16 @@
 #' Title
 #'
 #' @param modelOut 
-#' @param theta1 integer; number of the first parameter involved in the interaction
-#' @param theta2 integer; number of the second parameter involved in the interaction
-#' @param theta3 integer; number of the third parameter involved in the interaction
-#' @param thetaInt12 integer; number of the interaction between the first and second parameter
-#' @param thetaInt13 integer; number of the interaction between the first and third parameter
-#' @param thetaInt23 integer; number of the interaction between the second and third parameter
-#' @param thetaInt123 integer; number of the 3-way interaction 
-#' @param theta1vals numeric; change statistic values for the first parameter
-#' @param theta2vals numeric; change statistic values for the second parameter
-#' @param theta3vals numeric; change statistic values for the third parameter
+#' @param theta_1 integer; number of the first parameter involved in the interaction
+#' @param theta_2 integer; number of the second parameter involved in the interaction
+#' @param theta_3 integer; number of the third parameter involved in the interaction
+#' @param theta_int_12 integer; number of the interaction between the first and second parameter
+#' @param theta_int_13 integer; number of the interaction between the first and third parameter
+#' @param theta_int_23 integer; number of the interaction between the second and third parameter
+#' @param theta_int_123 integer; number of the 3-way interaction 
+#' @param theta_1vals numeric; change statistic values for the first parameter
+#' @param theta_2vals numeric; change statistic values for the second parameter
+#' @param theta_3vals numeric; change statistic values for the third parameter
 #' @param control_fdr logical; should Bonferroni-Holms correction be used
 #' @param alpha numeric; what is the alpha-level
 #' @param round_res integer; to which level should results be rounded
@@ -71,41 +71,41 @@
 #'                useCluster = TRUE)
 #' 
 #' x2 <- JNK_siena(res,
-#'                 theta1 = 6,
-#'                 theta2 = 7, 
-#'                 thetaInt12 = 8,
-#'                 theta1vals = c(-10:10), 
-#'                 theta2vals = c(-10:10))
+#'                 theta_1 = 6,
+#'                 theta_2 = 7, 
+#'                 theta_int_12 = 8,
+#'                 theta_1vals = c(-10:10), 
+#'                 theta_2vals = c(-10:10))
 #' 
 #' x2$plots$`smoke alter`
 #' 
 #' x3 <- JNK_siena(res,
-#'                 theta1 = 6,
-#'                 theta2 = 7, 
-#'                 theta3 = 5, 
-#'                 thetaInt12 = 8,
-#'                 thetaInt13 = 10,
-#'                 thetaInt23 = 9,
-#'                 thetaInt123 = 11,
-#'                 theta1vals = c(-10:10), 
-#'                 theta2vals = c(-10:10), 
-#'                 theta3vals = c(0:6),
+#'                 theta_1 = 6,
+#'                 theta_2 = 7, 
+#'                 theta_3 = 5, 
+#'                 theta_int_12 = 8,
+#'                 theta_int_13 = 10,
+#'                 theta_int_23 = 9,
+#'                 theta_int_123 = 11,
+#'                 theta_1vals = c(-10:10), 
+#'                 theta_2vals = c(-10:10), 
+#'                 theta_3vals = c(0:6),
 #'                 range_size = 10)
 #' 
 #' x3$plots$`smoke alter`
 #' }
 #' 
 JNK_siena <- function(modelOut, 
-                      theta1,
-                      theta2, 
-                      theta3 = NULL,
-                      thetaInt12 = NULL, 
-                      thetaInt13 = NULL,
-                      thetaInt23 = NULL,
-                      thetaInt123 = NULL, 
-                      theta1vals = NULL, 
-                      theta2vals = NULL,  
-                      theta3vals = NULL, 
+                      theta_1,
+                      theta_2, 
+                      theta_3 = NULL,
+                      theta_int_12 = NULL, 
+                      theta_int_13 = NULL,
+                      theta_int_23 = NULL,
+                      theta_int_123 = NULL, 
+                      theta_1vals = NULL, 
+                      theta_2vals = NULL,  
+                      theta_3vals = NULL, 
                       use_range_only = TRUE,
                       range_size = 500,
                       control_fdr = FALSE,
@@ -125,16 +125,16 @@ JNK_siena <- function(modelOut,
   
   sn <- modelOut$effects$effectName
   
-  if (any(c(theta1 ,theta2, theta3, thetaInt12, thetaInt13, thetaInt23, 
-            thetaInt123) > length(sn))) {
+  if (any(c(theta_1 ,theta_2, theta_3, theta_int_12, theta_int_13, theta_int_23, 
+            theta_int_123) > length(sn))) {
     cat('The following parameter numbers are incorrect:\n',
-        if (theta1 > length(sn)) {'theta1\n'},
-        if (theta2 > length(sn)) {'theta2\n'},
-        if (theta3 > length(sn)) {'theta3\n'},
-        if (thetaInt12 > length(sn)) {'thetaInt12\n'},
-        if (thetaInt13 > length(sn)) {'thetaInt13\n'},
-        if (thetaInt23 > length(sn)) {'thetaInt23\n'},
-        if (thetaInt123 > length(sn)) {'thetaInt123\n'},
+        if (theta_1 > length(sn)) {'theta_1\n'},
+        if (theta_2 > length(sn)) {'theta_2\n'},
+        if (theta_3 > length(sn)) {'theta_3\n'},
+        if (theta_int_12 > length(sn)) {'theta_int_12\n'},
+        if (theta_int_13 > length(sn)) {'theta_int_13\n'},
+        if (theta_int_23 > length(sn)) {'theta_int_23\n'},
+        if (theta_int_123 > length(sn)) {'theta_int_123\n'},
         'Numbers need to be the number of the effect in the modelOut object.\n',
         'See most left column of your siena07() result call.\n\n')
     stop()
@@ -143,28 +143,28 @@ JNK_siena <- function(modelOut,
   
   covT <- modelOut$covtheta
   
-  if (is.null(theta3)) {
-    vals <- list(theta1vals, theta2vals)
-    coefs <- c(modelOut$theta[theta1],
-               modelOut$theta[theta2],
-               modelOut$theta[thetaInt12])
-    name <- c(sn[theta1],sn[theta2])
-    covar <- covT[c(theta1,theta2,thetaInt12),
-                  c(theta1,theta2,thetaInt12)]
+  if (is.null(theta_3)) {
+    vals <- list(theta_1vals, theta_2vals)
+    coefs <- c(modelOut$theta[theta_1],
+               modelOut$theta[theta_2],
+               modelOut$theta[theta_int_12])
+    name <- c(sn[theta_1],sn[theta_2])
+    covar <- covT[c(theta_1,theta_2,theta_int_12),
+                  c(theta_1,theta_2,theta_int_12)]
   } else {
-    vals <- list(theta1vals, theta2vals, theta3vals)
-    coefs <- c(modelOut$theta[theta1],
-               modelOut$theta[theta2],
-               modelOut$theta[theta3],
-               modelOut$theta[thetaInt12],
-               modelOut$theta[thetaInt13],
-               modelOut$theta[thetaInt23],
-               modelOut$theta[thetaInt123])
-    name <- c(sn[theta1],sn[theta2],sn[theta3])
-    covar <- covT[c(theta1,theta2,theta3,thetaInt12,
-                    thetaInt13,thetaInt23,thetaInt123),
-                  c(theta1,theta2,theta3,thetaInt12,
-                    thetaInt13,thetaInt23,thetaInt123)]
+    vals <- list(theta_1vals, theta_2vals, theta_3vals)
+    coefs <- c(modelOut$theta[theta_1],
+               modelOut$theta[theta_2],
+               modelOut$theta[theta_3],
+               modelOut$theta[theta_int_12],
+               modelOut$theta[theta_int_13],
+               modelOut$theta[theta_int_23],
+               modelOut$theta[theta_int_123])
+    name <- c(sn[theta_1],sn[theta_2],sn[theta_3])
+    covar <- covT[c(theta_1,theta_2,theta_3,theta_int_12,
+                    theta_int_13,theta_int_23,theta_int_123),
+                  c(theta_1,theta_2,theta_3,theta_int_12,
+                    theta_int_13,theta_int_23,theta_int_123)]
   }
   
   freq_int(name = name,

@@ -1,9 +1,9 @@
 #' Johnson-Neyman or Johnson-Neyman-Krause plot for lm or glm outputs
 #'
 #' @param modelOut lm or glm output
-#' @param theta1 character; name of the first variable involved in the interaction
-#' @param theta2 character; name of the second variable involved in the interaction
-#' @param theta3 character; name of the third variable involved in the interaction
+#' @param theta_1 character; name of the first variable involved in the interaction
+#' @param theta_2 character; name of the second variable involved in the interaction
+#' @param theta_3 character; name of the third variable involved in the interaction
 #' @param control_fdr logical; should Bonferroni-Holms correction be used
 #' @param alpha numeric; what is the alpha-level
 #' @param round_res integer; to which level should results be rounded
@@ -32,20 +32,20 @@
 #' res <- lm(y ~ x * z * w,dat)
 #' 
 #' x2  <- JNK_lm(res,
-#'              theta1 = 'x',
-#'              theta2 = 'z')
+#'              theta_1 = 'x',
+#'              theta_2 = 'z')
 #' x2$plots$z
 #' 
 #' x3  <- JNK_lm(res,
-#'              theta1 = 'x',
-#'              theta2 = 'z',
-#'              theta3 = 'w')
+#'              theta_1 = 'x',
+#'              theta_2 = 'z',
+#'              theta_3 = 'w')
 #' x3$plots$z
 #' }
 JNK_lm <- function(modelOut, 
-                  theta1,
-                  theta2, 
-                  theta3 = NULL,
+                  theta_1,
+                  theta_2, 
+                  theta_3 = NULL,
                   control_fdr = FALSE,
                   alpha = 0.05,
                   round_res = 3,
@@ -64,40 +64,40 @@ JNK_lm <- function(modelOut,
   covT <- vcov(modelOut)
   
   if (is.null(range_size)) {
-    if (is.null(theta3)) {
+    if (is.null(theta_3)) {
       range_size <- 1000
     } else {
       range_size <- 50
     }
   }
   
-  if (is.null(theta3)) {
-    vals <- list(range(modelOut$model[[theta1]], na.rm = TRUE),
-                 range(modelOut$model[[theta2]], na.rm = TRUE))
-    coefs <- modelOut$coefficients[c(theta1,theta2,paste0(theta1,':',theta2))]
-    name <- c(theta1,theta2)
-    covar <- covT[c(theta1,theta2,paste0(theta1,':',theta2)),
-                  c(theta1,theta2,paste0(theta1,':',theta2))]
+  if (is.null(theta_3)) {
+    vals <- list(range(modelOut$model[[theta_1]], na.rm = TRUE),
+                 range(modelOut$model[[theta_2]], na.rm = TRUE))
+    coefs <- modelOut$coefficients[c(theta_1,theta_2,paste0(theta_1,':',theta_2))]
+    name <- c(theta_1,theta_2)
+    covar <- covT[c(theta_1,theta_2,paste0(theta_1,':',theta_2)),
+                  c(theta_1,theta_2,paste0(theta_1,':',theta_2))]
   } else {
-    vals <- list(range(modelOut$model[[theta1]], na.rm = TRUE),
-                 range(modelOut$model[[theta2]], na.rm = TRUE),
-                 range(modelOut$model[[theta3]], na.rm = TRUE))
-    coefs <- modelOut$coefficients[c(theta1,theta2,theta3,
-                                     paste0(theta1,':',theta2),
-                                     paste0(theta1,':',theta3),
-                                     paste0(theta2,':',theta3),
-                                     paste(theta1,theta2,theta3, sep = ':'))]
-    name <- c(theta1,theta2,theta3)
-    covar <- covT[c(theta1,theta2,theta3,
-                    paste0(theta1,':',theta2),
-                    paste0(theta1,':',theta3),
-                    paste0(theta2,':',theta3),
-                    paste(theta1,theta2,theta3, sep = ':')),
-                  c(theta1,theta2,theta3,
-                    paste0(theta1,':',theta2),
-                    paste0(theta1,':',theta3),
-                    paste0(theta2,':',theta3),
-                    paste(theta1,theta2,theta3, sep = ':'))]
+    vals <- list(range(modelOut$model[[theta_1]], na.rm = TRUE),
+                 range(modelOut$model[[theta_2]], na.rm = TRUE),
+                 range(modelOut$model[[theta_3]], na.rm = TRUE))
+    coefs <- modelOut$coefficients[c(theta_1,theta_2,theta_3,
+                                     paste0(theta_1,':',theta_2),
+                                     paste0(theta_1,':',theta_3),
+                                     paste0(theta_2,':',theta_3),
+                                     paste(theta_1,theta_2,theta_3, sep = ':'))]
+    name <- c(theta_1,theta_2,theta_3)
+    covar <- covT[c(theta_1,theta_2,theta_3,
+                    paste0(theta_1,':',theta_2),
+                    paste0(theta_1,':',theta_3),
+                    paste0(theta_2,':',theta_3),
+                    paste(theta_1,theta_2,theta_3, sep = ':')),
+                  c(theta_1,theta_2,theta_3,
+                    paste0(theta_1,':',theta_2),
+                    paste0(theta_1,':',theta_3),
+                    paste0(theta_2,':',theta_3),
+                    paste(theta_1,theta_2,theta_3, sep = ':'))]
   }
   
   freq_int(name = name,
