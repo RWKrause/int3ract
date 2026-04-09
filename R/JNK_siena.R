@@ -125,7 +125,8 @@ JNK_siena <- function(modelOut,
   
   sn <- modelOut$effects$effectName
   
-  if (any(c(theta_1 ,theta_2, theta_3, theta_int_12, theta_int_13, theta_int_23, 
+  if (any(c(theta_1 ,theta_2, theta_3, 
+            theta_int_12, theta_int_13, theta_int_23, 
             theta_int_123) > length(sn))) {
     cat('The following parameter numbers are incorrect:\n',
         if (theta_1 > length(sn)) {'theta_1\n'},

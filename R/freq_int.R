@@ -1,7 +1,7 @@
-#' Internal frequentist interaction finction
+#' Function for creating 2- and 3-way plots and tables based on any frequentist multiplicative model.
 #'
-#' @param name charachter; names of the variables involved in interaction
-#' @param covar matrix; covariance of relevant parameters
+#' @param name character; names of the variables involved in interaction
+#' @param covar matrix; covariance of relevant parameters only
 #' @param coefs numeric; vector of coefficient values
 #' @param vals list; values of the variables
 #' @param alpha see JNK_lm() or JNK_siena()
@@ -28,6 +28,7 @@
 #' @import tidyr
 #' @import tibble
 #' 
+#' @export
 freq_int <- function(name,
                      covar,
                      coefs,
@@ -46,303 +47,161 @@ freq_int <- function(name,
                      color_grid = 'black',
                      grid_density = 0.01,
                      grid_spacing = 0.1,
-                     crosshatch_non_sig = TRUE
-                     ) {
+                     crosshatch_non_sig = TRUE) {
   
+  k      <- length(name)
+  z_crit <- abs(qnorm(alpha / 2)) 
   
-  library(ggplot2)
-  library(ggpattern)
-  library(tidyverse)
-  library(scales)
-  
-  k <- length(name)
-  for (var in 1:k) {
-    vals[[var]] <- seq(min(vals[[var]], nam = TRUE), 
-                       max(vals[[var]], nam = TRUE),
+  for (var in 1:k)
+    vals[[var]] <- seq(min(vals[[var]]), 
+                       max(vals[[var]]), 
                        length.out = range_size)
+  
+  if (k == 2) {
+    
+    add_ribbons <- function(p, df) {
+      runs   <- rle(df$sig)
+      ends   <- cumsum(runs$lengths)
+      starts <- c(1, head(ends, -1) + 1)
+      for (r in seq_along(runs$values)) {
+        p <- p + ggplot2::geom_ribbon(
+          data = df[starts[r]:ends[r], ],
+          ggplot2::aes(ymin = theta_vals - z_crit * theta_se,
+                       ymax = theta_vals + z_crit * theta_se),
+          fill  = if (runs$values[r]) sig_color else non_sig_color,
+          alpha = 0.7)
+      }
+      p
+    }
+    
+    td <- lapply(1:k, function(var) {
+      mv      <- c(1:k)[-var]
+      theta1s <- coefs[var] + coefs[3] * vals[[mv]]
+      seT1    <- sqrt(covar[var, var] +
+                        vals[[mv]] * 2 * covar[mv, var] +
+                        vals[[mv]]^2 * covar[3, 3])
+      p1      <- 2 * pmin(pnorm(theta1s / seT1), 1 - pnorm(theta1s / seT1))
+      
+      sig11 <- if (control_fdr) {
+        ord     <- order(p1)
+        sig_ord <- p1[ord] < alpha * seq_along(p1) / length(p1)
+        if (!all(sig_ord)) sig_ord[which.max(!sig_ord):length(p1)] <- FALSE
+        out        <- logical(length(p1))
+        out[ord]   <- sig_ord
+        out
+      } else {
+        p1 < alpha
+      }
+      
+      data.frame(theta      = name[var],
+                 moderator  = name[mv],
+                 mod_vals   = round(vals[[mv]],   round_res),
+                 theta_vals = round(theta1s,       round_res),
+                 theta_se   = round(seT1,          round_res),
+                 theta_p    = round(p1, 3),
+                 sig        = sig11)
+    })
+    names(td) <- name
+    
+    plots <- lapply(1:2, function(i) {
+      p <- ggplot2::ggplot(td[[i]], ggplot2::aes(mod_vals, theta_vals)) +
+        ggplot2::geom_hline(ggplot2::aes(yintercept = 0)) +
+        ggplot2::theme_bw() +
+        ggplot2::ylab(paste0("Theta for ", name[i])) +
+        ggplot2::xlab(name[-i]) +
+        ggplot2::ggtitle(paste0("Moderation analysis for ", name[i]))
+      
+      add_ribbons(p, td[[i]]) +
+        ggplot2::geom_path(linewidth = 1, color = line_color)
+    })
+    names(plots) <- name
+    
+    return(list(param_table = td, plots = plots))
   }
-
-  td <- list()
-  if (length(vals) == 2) {
-    for (var in 1:k) {
-      theta1s <- coefs[var] + coefs[3] * vals[[c(1:k)[-var]]]
-      seT1 <- sqrt(covar[var,var] + 
-                     vals[[c(1:k)[-var]]] * 2 * covar[c(1:k)[-var],var] + 
-                     vals[[c(1:k)[-var]]] ^ 2 * covar[3,3])
-      z1 <- theta1s/seT1
-      p1 <- c()
-      for (i in 1:length(vals[[c(1:k)[-var]]])) {
-        p1[i] <-  2 * pmin(pnorm(z1[[i]]), (1 - pnorm(z1[[i]])))
-      }
-      if (control_fdr) {
-        p1O <- p1[order(p1)]
-        bhT1 <- alpha * c(1:length(vals[[c(1:k)[-var]]])) / 
-          length(vals[[c(1:k)[-var]]])
-        sig1 <- p1O < bhT1
-        
-        if (!all(sig1)) {
-          first_false <- which.max(!sig1)
-          sig1[first_false:length(vals[[c(1:k)[-var]]])] <- FALSE
-        }
-        
-        sig11 <- vector(length = length(vals[[c(1:k)[-var]]]))
-        for (i in 1:length(vals[[c(1:k)[-var]]])) {
-          sig11[order(p1)[i]] <- sig1[i]
-        }
-      } else {
-        sig11 <- p1 < alpha
-      }
-      
-      td[[var]] <- data.frame(theta      = rep(name[var],
-                                               length(vals[[c(1:k)[-var]]])),
-                              moderator  = rep(name[var],
-                                               length(vals[[c(1:k)[-var]]])),
-                              mod_vals   = round(vals[[c(1:k)[-var]]],
-                                                 round_res),
-                              theta_vals = round(theta1s,round_res),
-                              theta_se   = round(seT1,round_res),
-                              theta_p    = round(p1,3),
-                              sig = sig11)
-    }
-    
-    plots <- vector(mode = 'list', length = 2)
-    names(plots) <- names(td) <- name
-    
-    for (i in 1:2) {
-      plots[[i]] <- ggplot(data = td[[i]], 
-                           aes(x = mod_vals, 
-                               y = theta_vals)) + 
-        geom_hline(aes(yintercept = 0)) +
-        theme_bw() + 
-        ylab(paste0('Theta for ',names(plots)[i])) +
-        xlab(names(plots)[-i]) +
-        ggtitle(paste0('Moderation analysis for ',names(plots)[i]))
-      
-      if (!any(td[[i]]$sig)) {
-        plots[[i]] <- plots[[i]] + 
-          geom_ribbon(aes(ymin = -abs(qnorm(alpha / 2)) * theta_se + 
-                            theta_vals,
-                          ymax =  abs(qnorm(alpha / 2)) * theta_se + 
-                            theta_vals),
-                      fill = non_sig_color,
-                      alpha = 0.7)
-      } else if (all(td[[i]]$sig)) {
-        plots[[i]] <- plots[[i]] + 
-          geom_ribbon(aes(ymin = -abs(qnorm(alpha / 2)) * theta_se +
-                            theta_vals,
-                          ymax =  abs(qnorm(alpha / 2)) * theta_se +
-                            theta_vals),
-                      fill = sig_color,
-                      alpha = 0.7)
-      } else {
-        nvals <- nrow(td[[i]])
-        if (td[[i]]$sig[1]) {
-          first_false <- which.max(!td[[i]]$sig)
-          last_false  <- nrow(td[[i]]) - which.max(rev(!td[[i]]$sig)) + 1
-          
-          
-          plots[[i]] <- plots[[i]] + 
-            geom_ribbon(data = td[[i]][1:(first_false - 1),],
-                        aes(ymin = -abs(qnorm(alpha / 2)) * theta_se +
-                              theta_vals,
-                            ymax =  abs(qnorm(alpha / 2)) * theta_se +
-                              theta_vals),
-                        fill = sig_color,
-                        alpha = 0.7) + 
-            geom_ribbon(data = td[[i]][first_false:last_false,],
-                        aes(ymin = -abs(qnorm(alpha / 2)) * theta_se +
-                              theta_vals,
-                            ymax =  abs(qnorm(alpha / 2)) * theta_se +
-                              theta_vals),
-                        fill = non_sig_color,
-                        alpha = 0.7)
-          if (td[[i]]$sig[nvals]) {
-            plots[[i]] <- plots[[i]] + 
-              geom_ribbon(data = td[[i]][(last_false + 1):nvals,],
-                          aes(ymin = -abs(qnorm(alpha / 2)) * theta_se +
-                                theta_vals,
-                              ymax =  abs(qnorm(alpha / 2)) * theta_se +
-                                theta_vals),
-                          fill = sig_color,
-                          alpha = 0.7)
-          }
-        } else {
-          first_true <- which.max(td[[i]]$sig)
-          last_true  <- nrow(td[[i]]) - which.max(rev(td[[i]]$sig)) + 1
-          
-          
-          plots[[i]] <- plots[[i]] + 
-            geom_ribbon(data = td[[i]][1:(first_true - 1),],
-                        aes(ymin = -abs(qnorm(alpha / 2)) * theta_se +
-                            theta_vals,
-                            ymax =  abs(qnorm(alpha / 2)) * theta_se +
-                              theta_vals),
-                        fill = non_sig_color,
-                        alpha = 0.7) + 
-            geom_ribbon(data = td[[i]][first_true:last_true,],
-                        aes(ymin = -abs(qnorm(alpha / 2)) * theta_se +
-                              theta_vals,
-                            ymax =  abs(qnorm(alpha / 2)) * theta_se +
-                              theta_vals),
-                        fill = sig_color,
-                        alpha = 0.7)
-          if (!td[[i]]$sig[nvals]) {
-            plots[[i]] <- plots[[i]] + 
-              geom_ribbon(data = td[[i]][(last_true + 1):nvals,],
-                          aes(ymin = -abs(qnorm(alpha / 2)) * theta_se +
-                                theta_vals,
-                              ymax =  abs(qnorm(alpha / 2)) * theta_se +
-                                theta_vals),
-                          fill = non_sig_color,
-                          alpha = 0.7)
-          }
-        }
-      }
-      plots[[i]] <- plots[[i]] +  
-        geom_path(linewidth = 1, color = line_color) 
-    }
-    
-    
-    
-    return_list <- list(param_table = td,  plots = plots)
-    
-  } else {
-    thetaMat <- vector(mode = 'list', length = 3)
-    seMat    <- vector(mode = 'list', length = 3)
-    ZMat     <- vector(mode = 'list', length = 3)
-    pMat     <- vector(mode = 'list', length = 3)
-    sigMat   <- vector(mode = 'list', length = 3)
-    figures  <- vector(mode = 'list', length = 3)
-    names(thetaMat) <- names(seMat) <- names(figures) <- name
-    names(ZMat) <- names(pMat) <- names(sigMat) <- name
-    
-    thetaMat[[1]] <- outer(vals[[2]],vals[[3]],
-                           parFun,
-                           bx     = coefs[1],
-                           bm1x   = coefs[4],
-                           bm2x   = coefs[5],
-                           bm1m2x = coefs[7])
-    
-    thetaMat[[2]] <- outer(vals[[1]],vals[[3]],
-                           parFun,
-                           bx     = coefs[2],
-                           bm1x   = coefs[4],
-                           bm2x   = coefs[6],
-                           bm1m2x = coefs[7])
-    
-    thetaMat[[3]] <- outer(vals[[1]],vals[[3]],
-                           parFun,
-                           bx     = coefs[3],
-                           bm1x   = coefs[5],
-                           bm2x   = coefs[6],
-                           bm1m2x = coefs[7])
-    
-    
-    seMat[[1]] <-  outer(vals[[2]],vals[[3]],
-                         seFun,
-                         Vx           = covar[1,1],
-                         Vm1x         = covar[4,4],
-                         Vm2x         = covar[5,5],
-                         Vm1m2x       = covar[7,7],
-                         covX_m1x     = covar[1,4],
-                         covX_m2x     = covar[1,5],
-                         covX_m1m2x   = covar[1,7],
-                         covm1x_m2x   = covar[4,5],
-                         covm1x_m1m2x = covar[4,7],
-                         covm2x_m1m2x = covar[5,7])
-    
-    seMat[[2]] <- outer(vals[[1]],vals[[3]],
-                        seFun,
-                        Vx           = covar[2,2],
-                        Vm1x         = covar[4,4],
-                        Vm2x         = covar[6,6],
-                        Vm1m2x       = covar[7,7],
-                        covX_m1x     = covar[2,4],
-                        covX_m2x     = covar[2,6],
-                        covX_m1m2x   = covar[2,7],
-                        covm1x_m2x   = covar[4,6],
-                        covm1x_m1m2x = covar[4,7],
-                        covm2x_m1m2x = covar[6,7])
-    
-    seMat[[3]] <- outer(vals[[1]],vals[[2]],
-                        seFun,
-                        Vx           = covar[3,3],
-                        Vm1x         = covar[5,5],
-                        Vm2x         = covar[6,6],
-                        Vm1m2x       = covar[7,7],
-                        covX_m1x     = covar[3,5],
-                        covX_m2x     = covar[3,6],
-                        covX_m1m2x   = covar[3,7],
-                        covm1x_m2x   = covar[5,6],
-                        covm1x_m1m2x = covar[5,7],
-                        covm2x_m1m2x = covar[6,7])
-    
-    for (i in 1:3) {
-      row.names(thetaMat[[i]]) <- row.names(seMat[[i]]) <- vals[-i][[1]]
-      colnames(thetaMat[[i]])  <- colnames(seMat[[i]])  <- vals[-i][[2]]
-      ZMat[[i]]   <- thetaMat[[i]] / seMat[[i]]
-      pMat[[i]]   <- 2 * pmin(pnorm(ZMat[[i]]), (1 - pnorm(ZMat[[i]])))
-      sigMat[[i]] <- pMat[[i]] < alpha
-      
-      
-      
-      dat2 <- thetaMat[[i]] |>
-        as.data.frame() |>
-        rownames_to_column("Var1") |>
-        pivot_longer(-Var1, names_to = "Var2", values_to = "Parameter Value") 
-      
-      sig2 <- sigMat[[i]] |>
-        as.data.frame() |>
-        rownames_to_column("Var1") |>
-        pivot_longer(-Var1, names_to = "Var2", values_to = "value") 
-      
-      dat2$Var1 <- as.numeric(dat2$Var1)
-      dat2$Var2 <- as.numeric(dat2$Var2)
-      sig2$Var1 <- as.numeric(dat2$Var1)
-      sig2$Var2 <- as.numeric(dat2$Var2)
-      
-      if (crosshatch_non_sig) {
-        sig2$pattern <- ifelse(sig2$value, "none",'crosshatch')
-      } else {
-        sig2$pattern <- ifelse(sig2$value, "crosshatch",'none')
-      }
-      
-      sig3 <- sig2[!sig2$value,]
-      
-      
-      figures[[i]] <- ggplot(dat2, aes(Var1, Var2)) +
-        geom_tile(aes(fill = `Parameter Value`)) +
-        scale_color_identity() +
-        scale_fill_gradient2(low = color_low, 
-                             high = color_high,
-                             mid = color_mid,
-                             midpoint = 0) +
-        geom_tile_pattern(data = sig3, aes(pattern = pattern),
-                          pattern_density = grid_density,
-                          pattern_spacing = grid_spacing,
-                          pattern_color = color_grid,
-                          alpha = 0) +
-        ggtitle(name[i]) +
-        theme_bw() +
-        guides(pattern = "none") + 
-        xlab(name[-i][1]) +
-        ylab(name[-i][2])
-      
-      if (all(c(length(vals[[1]]) < 8,
-                length(vals[[2]]) < 8,
-                length(vals[[3]]) < 8))) {
-        
-        figures[[i]] <- figures[[i]] + geom_text(aes(
-          label = round(`Parameter Value`, round_res)),
-          color = color_values) 
-      } 
-      
-    }
-    return_list <- list(thetas = thetaMat,
-                        standard_errors = seMat,
-                        p_values = pMat,
-                        significance = sigMat,
-                        plots = figures)
+  
+  x_idx  <- c(1L, 2L, 3L)
+  m1_idx <- c(4L, 4L, 5L)
+  m2_idx <- c(5L, 6L, 6L)
+  v_idx  <- list(c(2L,3L), c(1L,3L), c(1L,2L))
+  
+  mat_to_long <- function(mat, val_name) {
+    mat |>
+      as.data.frame() |>
+      tibble::rownames_to_column("Var1") |>
+      tidyr::pivot_longer(-Var1, names_to = "Var2", values_to = val_name) |>
+      dplyr::mutate(Var1 = as.numeric(Var1), Var2 = as.numeric(Var2))
   }
-  return(return_list)
+  
+  mats <- lapply(1:3, function(i) {
+    xi  <- x_idx[i]
+    m1i <- m1_idx[i]
+    m2i <- m2_idx[i]
+    vi <- v_idx[[i]]
+    th  <- outer(vals[[vi[1]]], 
+                 vals[[vi[2]]], 
+                 parFun,
+                 bx = coefs[xi], 
+                 bm1x = coefs[m1i],
+                 bm2x = coefs[m2i],
+                 bm1m2x = coefs[7])
+    se  <- outer(vals[[vi[1]]], vals[[vi[2]]], seFun,
+                 Vx           = covar[xi,  xi],
+                 Vm1x         = covar[m1i, m1i],
+                 Vm2x         = covar[m2i, m2i],
+                 Vm1m2x       = covar[7,   7],
+                 covX_m1x     = covar[xi,  m1i],
+                 covX_m2x     = covar[xi,  m2i],
+                 covX_m1m2x   = covar[xi,  7],
+                 covm1x_m2x   = covar[m1i, m2i],
+                 covm1x_m1m2x = covar[m1i, 7],
+                 covm2x_m1m2x = covar[m2i, 7])
+    row.names(th) <- row.names(se) <- vals[[vi[1]]]
+    colnames(th)  <- colnames(se)  <- vals[[vi[2]]]
+    list(theta = th, se = se)
+  })
+  
+  thetaMat <- setNames(lapply(mats, `[[`, "theta"), name)
+  seMat    <- setNames(lapply(mats, `[[`, "se"),    name)
+  ZMat     <- setNames(lapply(1:3, \(i) thetaMat[[i]] / seMat[[i]]), name)
+  pMat     <- setNames(lapply(ZMat, \(z) 2 * pmin(pnorm(z), 1 - pnorm(z))),name)
+  sigMat   <- setNames(lapply(pMat, \(p) p < alpha),name)
+  
+  small_vals <- all(sapply(vals, length) < 8)
+  
+  figures <- lapply(1:3, function(i) {
+    dat2 <- mat_to_long(thetaMat[[i]], "Parameter Value")
+    sig2 <- mat_to_long(sigMat[[i]],  "value")
+    
+    sig2$pattern <- ifelse(sig2$value == crosshatch_non_sig, 
+                           "none", "crosshatch")
+    sig3 <- sig2[!sig2$value, ]
+    
+    p <- ggplot2::ggplot(dat2, ggplot2::aes(Var1, Var2)) +
+      ggplot2::geom_tile(ggplot2::aes(fill = `Parameter Value`)) +
+      ggplot2::scale_color_identity() +
+      ggplot2::scale_fill_gradient2(low = color_low, high = color_high,
+                                    mid = color_mid, midpoint = 0) +
+      ggpattern::geom_tile_pattern(data = sig3, ggplot2::aes(pattern = pattern),
+                                   pattern_density = grid_density,
+                                   pattern_spacing = grid_spacing,
+                                   pattern_color   = color_grid, alpha = 0) +
+      ggplot2::ggtitle(name[i]) +
+      ggplot2::theme_bw() +
+      ggplot2::guides(pattern = "none") +
+      ggplot2::xlab(name[-i][1]) +
+      ggplot2::ylab(name[-i][2])
+    
+    if (small_vals)
+      p <- p + ggplot2::geom_text(
+        ggplot2::aes(label = round(`Parameter Value`, round_res)),
+        color = color_values)
+    p
+  })
+  names(figures) <- name
+  
+  list(thetas = thetaMat, 
+       standard_errors = seMat,
+       p_values = pMat, 
+       significance = sigMat, 
+       plots = figures)
 }

@@ -7,16 +7,15 @@
 jnb_support2(
   theta,
   group,
-  sbo = sbo,
-  theta_1 = theta_1,
-  theta_2 = theta_2,
-  theta_1n = theta_1n,
-  theta_2n = theta_2n,
-  theta_int_12 = theta_int_12,
-  theta_1_vals = theta_1_vals,
-  theta_2_vals = theta_2_vals,
-  save = save,
-  folder = folder
+  theta_1,
+  theta_2,
+  theta_1n,
+  theta_2n,
+  theta_int_12,
+  theta_1_vals,
+  theta_2_vals,
+  save,
+  folder
 )
 }
 \arguments{
@@ -29,14 +28,11 @@ jnb_support2(
 \code{'Eta'} for fixed effects, \code{'Mu'} for the hyper-mean of random
 effects, or \code{'group<i>'} for group-specific random effects.}
 
-\item{sbo}{multiSiena; the \code{multiSiena()} output object. Used to access
-model metadata such as the number of groups.}
-
 \item{theta_1}{numeric; index of the first parameter in the (rate-excluded)
-effects object. See \code{sbo$effects[sbo$effects$type != 'rate',]}.}
+effects object. See \code{modelOut$effects[modelOut$effects$type != 'rate',]}.}
 
 \item{theta_2}{numeric; index of the second parameter in the (rate-excluded)
-effects object. See \code{sbo$effects[sbo$effects$type != 'rate',]}.}
+effects object. See \code{modelOut$effects[modelOut$effects$type != 'rate',]}.}
 
 \item{theta_1n}{character; display name for theta_1, derived from
 \code{effectName} with special characters stripped.}

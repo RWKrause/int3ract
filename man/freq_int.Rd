@@ -2,7 +2,7 @@
 % Please edit documentation in R/freq_int.R
 \name{freq_int}
 \alias{freq_int}
-\title{Internal frequentist interaction finction}
+\title{Function for creating 2- and 3-way plots and tables based on any frequentist multiplicative model.}
 \usage{
 freq_int(
   name,
@@ -27,9 +27,9 @@ freq_int(
 )
 }
 \arguments{
-\item{name}{charachter; names of the variables involved in interaction}
+\item{name}{character; names of the variables involved in interaction}
 
-\item{covar}{matrix; covariance of relevant parameters}
+\item{covar}{matrix; covariance of relevant parameters only}
 
 \item{coefs}{numeric; vector of coefficient values}
 
@@ -69,5 +69,5 @@ freq_int(
 Returns tables and plots for interactions
 }
 \description{
-Internal frequentist interaction finction
+Function for creating 2- and 3-way plots and tables based on any frequentist multiplicative model.
 }

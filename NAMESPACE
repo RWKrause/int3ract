@@ -3,6 +3,7 @@
 export(JNK_lm)
 export(JNK_siena)
 export(JNSienaBayes)
+export(freq_int)
 import(dplyr)
 import(ggpattern)
 import(ggplot2)

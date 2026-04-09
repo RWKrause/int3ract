@@ -7,7 +7,6 @@
 jnb_support3(
   theta,
   group,
-  sbo = sbo,
   theta_1 = theta_1,
   theta_2 = theta_2,
   theta_3 = theta_3,
@@ -28,7 +27,9 @@ jnb_support3(
   color_values = color_values,
   color_grid = color_grid,
   grid_density = grid_density,
-  grid_spacing = grid_spacing
+  grid_spacing = grid_spacing,
+  save = save,
+  folder = folder
 )
 }
 \arguments{
@@ -41,10 +42,8 @@ Extracted from either \code{ThinParameters} or \code{ThinPosteriorMu}.}
 \code{'Eta'} for fixed effects, \code{'Mu'} for the hyper-mean of random
 effects, or \code{'group<i>'} for group-specific random effects.}
 
-\item{sbo}{multiSiena; the \code{multiSiena()} output object.}
-
 \item{theta_1}{numeric; index of the first parameter in the (rate-excluded)
-effects object. See \code{sbo$effects[sbo$effects$type != 'rate',]}.}
+effects object. See \code{modelOut$effects[modelOut$effects$type != 'rate',]}.}
 
 \item{theta_2}{numeric; index of the second parameter in the (rate-excluded)
 effects object.}
