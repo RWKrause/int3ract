@@ -83,7 +83,10 @@ jnb_support2 <- function(theta,
   }
   
   
-  make_plot <- function(plot_data, x_name, mod_name) {
+  make_plot <- function(plot_data, x_name, mod_name,
+                        color_mid = color_mid,
+                        color_low = color_low,
+                        color_high = color_high) {
     leg_label <- if (nchar(mod_name) < 26) {mod_name} else {"Moderator"}
     
     plot_data$modValue <- as.numeric(as.character(plot_data$modValue))
@@ -128,8 +131,14 @@ jnb_support2 <- function(theta,
   t1d <- make_td(theta_1x, theta_2_vals, theta_1n, theta_2n)
   t2d <- make_td(theta_2x, theta_1_vals, theta_2n, theta_1n)
   
-  g1  <- make_plot(t1plotData, theta_1n, theta_2n)
-  g2  <- make_plot(t2plotData, theta_2n, theta_1n)
+  g1  <- make_plot(t1plotData, theta_1n, theta_2n,
+                   color_mid = color_mid,
+                   color_low = color_low,
+                   color_high = color_high,)
+  g2  <- make_plot(t2plotData, theta_2n, theta_1n,
+                   color_mid = color_mid,
+                   color_low = color_low,
+                   color_high = color_high,)
   
   if (save) {
     ggplot2::ggsave(make_path(theta_1n, theta_2n), plot = g1, dpi = 600,
