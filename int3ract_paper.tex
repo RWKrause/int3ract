@@ -684,8 +684,10 @@ each of the three heatmaps (i.e., \(3 \times 2{,}500\) conditional
 effect evaluations). When all three moderator ranges contain fewer than
 eight distinct values, the point estimate is printed in each cell;
 otherwise only the colour gradient communicates the magnitude. The
-ranges for each variable are extracted from the \texttt{lm}/\texttt{glm}
-object but need to be supplied explicitly to \texttt{freq\_int(0)}.
+ranges for each variable are by default extracted from the
+\texttt{lm}/\texttt{glm} object but need to be supplied explicitly to
+\texttt{freq\_int()} or explicitly (see the code chunk below for
+\texttt{JNK\_siena()}).
 
 \subsection{\texorpdfstring{Stochastic Actor-Oriented Models
 (\texttt{JNK\_siena()})}{Stochastic Actor-Oriented Models (JNK\_siena())}}\label{stochastic-actor-oriented-models-jnk_siena}
@@ -819,8 +821,8 @@ increase in altX).}
 \subcaption{\label{fig-bayes-2fake-2}Posterior densities for reciprocity
 conditional on simultaneous changes in altX. Here, while generally
 positive, reciprocity only has a consistently positive effect on tie
-formation when altX changes moderately, around -1 to 1 (see green to
-blue curves). While reciprocity gets more positive with increasing
+formation when altX changes moderately, around -1 to 1 (curves with low
+color saturation). While reciprocity gets more positive with increasing
 values in the change of altX, the posterior variance increases as well.}
 
 \end{minipage}%

@@ -261,6 +261,7 @@ model.
 ```{r}
 #| label: example-2way-lm
 #| eval: true
+#| cache: true
 library(int3ract)
 
 set.seed(1402)
@@ -283,6 +284,8 @@ jn2 <- JNK_lm(mod2,
 #| label: fig-jn2
 #| eval: true
 #| echo: false
+#| cache: true
+#| dependson: "example-2way-lm"
 #| fig-cap: >
 #|   Johnson--Neyman plots for the two-way interaction between `x` and `z`
 #|   ($\alpha = 0.05$). The ribbon shows pointwise 95% confidence bands for
@@ -310,6 +313,8 @@ elsewhere.
 ```{r}
 #| label: example-3way-lm
 #| eval: true
+#| cache: true
+#| dependson: "example-2way-lm"
 mod3 <- lm(y ~ x * z * w, data = dat)
 
 jn3 <- JNK_lm(mod3,
@@ -323,6 +328,8 @@ jn3 <- JNK_lm(mod3,
 #| label: fig-jn3
 #| eval: true
 #| echo: false
+#| cache: true
+#| dependson: "example-3way-lm"
 #| fig-cap: >
 #|   Johnson--Neyman--Krause heatmaps for the three-way interaction among
 #|   `x`, `z`, and `w` (`range_size = 50`, $\alpha = 0.05$). Each cell
@@ -336,8 +343,8 @@ jn3 <- JNK_lm(mod3,
 #|   - "Conditional effect of `z` across the (`x`, `w`) moderator grid."
 #|   - "Conditional effect of `w` across the (`x`, `z`) moderator grid."
 #| layout: [[1,1],[1]]
-#| fig-width: 4.5
-#| fig-height: 4
+#| fig-width: 4
+#| fig-height: 3.5
 jn3$plots$x
 jn3$plots$z
 jn3$plots$w
@@ -347,8 +354,9 @@ Setting `range_size = 50` produces a $50 \times 50$ grid for each of the
 three heatmaps (i.e., $3 \times 2{,}500$ conditional effect evaluations).
 When all three moderator ranges contain fewer than eight distinct values, the
 point estimate is printed in each cell; otherwise only the colour gradient
-communicates the magnitude. The ranges for each variable are extracted from the 
-`lm`/`glm` object but need to be supplied explicitly to `freq_int(0)`.
+communicates the magnitude. The ranges for each variable are by default
+extracted from the `lm`/`glm` object but need to be supplied explicitly to 
+`freq_int()` or explicitly (see the code chunk below for `JNK_siena()`).
 
 ### Stochastic Actor-Oriented Models (`JNK_siena()`)
 
@@ -448,6 +456,7 @@ jnb2 <- JNSienaBayes(sbo          = my_multiSiena_result,
 #| label: fig-bayes-2fake
 #| echo: false
 #| eval: true
+#| cache: true
 #| fig-cap: >
 #|   Conditional posterior densities for the parameters for reciprocity and
 #|    altX on a attribute.
@@ -457,7 +466,7 @@ jnb2 <- JNSienaBayes(sbo          = my_multiSiena_result,
 #|    variance when reciprocity would decrease (i.e., a reciprocal tie to
 #|    someone with negative values on the covariate would be broken,
 #|    leading to -1 in recirpocity but overall an increase in altX)."
-#|   - "Posterior densities for reciprocity conditional on simultaneous changes in altX. Here, while generally positive, reciprocity only has a consistently positive effect on tie formation when altX changes moderately, around -1 to 1 (see green to blue curves). While reciprocity gets more positive with increasing values in the change of altX, the posterior variance increases as well."
+#|   - "Posterior densities for reciprocity conditional on simultaneous changes in altX. Here, while generally positive, reciprocity only has a consistently positive effect on tie formation when altX changes moderately, around -1 to 1 (curves with low color saturation). While reciprocity gets more positive with increasing values in the change of altX, the posterior variance increases as well."
 #| layout: [[1]]
 #| fig-width: 4.5
 #| fig-height: 3
@@ -494,26 +503,8 @@ t2plotData <- data.frame(modValue = as.factor(rep(round(seq(-3,3,0.5),3),
                                                   each = nrow(theta))),
                          parameter = theta_2x)
 
-t1d <- t1plotData |>
-  summarize(thetaPostMean = mean(parameter),
-            thetaPostSD = sd(parameter),
-            bayes_p = sum(parameter > 0) / length(parameter),
-            thetaPost2.5    = quantile(parameter,0.025),
-            thetaPost97.5   = quantile(parameter,0.975),
-            .by = modValue
-  )
 
-
-t2d <- t2plotData |>
-  summarize(thetaPostMean = mean(parameter),
-            thetaPostSD = sd(parameter),
-            bayes_p = sum(parameter > 0) / length(parameter),
-            thetaPost2.5    = quantile(parameter,0.025),
-            thetaPost97.5   = quantile(parameter,0.975),
-            .by = modValue
-  )
-
-
+t2plotData$modValue <- as.numeric(as.character(t2plotData$modValue))
 
 
 g1 <- ggplot(t1plotData, aes(x = parameter)) +
@@ -521,21 +512,28 @@ g1 <- ggplot(t1plotData, aes(x = parameter)) +
   geom_density(alpha = 0.1, aes(fill = modValue, color = modValue)) +
   theme_bw() +
   xlab('altX') +
-  ggtitle('Posterior distribution for altX conditional on Reciprocity') +  
+  ggtitle('Posterior distribution for altX \nconditional on Reciprocity') +  
   labs(color = 'Reciprocity Change',
        fill  = 'Reciprocity Change') 
 
-g2 <- ggplot(t2plotData, aes(x = parameter)) +
+
+g2 <- ggplot(t2plotData, aes(x = parameter,
+                              group  = modValue,
+                              fill   = as.numeric(as.character(modValue)),
+                              color  = as.numeric(as.character(modValue)))) +
   geom_vline(xintercept = 0) +
-  geom_density(alpha = 0.1, aes(fill = modValue, color = modValue)) +
+  geom_density(alpha = 0.1) +
+  scale_fill_gradient2(low = "#F05039", mid = "white", 
+                       high = "#000066", midpoint = 0) +
+  scale_color_gradient2(low = "#F05039", mid = "white", 
+                        high = "#000066", midpoint = 0) +
   theme_bw() +
   xlab('Reciprocity') +
-  ggtitle('Posterior distribution for Reciprocity conditional on altX') +
+  ggtitle('Posterior distribution for Reciprocity \nconditional on altX') +
   labs(color = 'altX \nChange \nStatistics',
-         fill =  'altX \nChange \nStatistics') 
+       fill  = 'altX \nChange \nStatistics')
 g1
 g2
-
 ```
 The returned object is a named list similar to those returned for frequentist 
 interactions. Each table here
@@ -586,10 +584,11 @@ jnb3 <- JNSienaBayes(sbo           = my_multiSiena_result,
 #| label: fig-bayes-3fake
 #| echo: false
 #| eval: true
+#| cache: true
 #| fig-cap: >
 #|   Figures for Bayesian 3-way interactions
 #| fig-subcap:
-#|   - "Mean posterior densities for the effect of ego's self-monitoring on tie
+#|   "Mean posterior densities for the effect of ego's self-monitoring on tie
 #|   creation conditional on ego's and alter's creativity. In this example,
 #|   self-monitoring has a positive effect on tie creation when both ego and
 #|   alter have similar levels of creativity."
@@ -667,7 +666,6 @@ color_values = 'grey40'
 color_grid = 'black'
 grid_density = 0.01
 grid_spacing = 0.1
-group = 'Eta'
 
 pat <- t1d[!t1d$sig,]
 
@@ -685,8 +683,7 @@ plotsMean <- ggplot(t1d, aes(mod1Val, mod2Val)) +
                     alpha = 0) +
   theme_bw() +
   guides(pattern = "none") + 
-  ggtitle(paste0('Average posterior density for ',
-                 ns[1],' (',group,')')) +
+  ggtitle(paste0('Average posterior density for ',ns[1])) +
   xlab(ns[-1][[1]]) +
   ylab(ns[-1][[2]]) +
   labs(fill = "Posterior Mean")
@@ -705,8 +702,7 @@ plotsP <- ggplot(t1d, aes(mod1Val, mod2Val)) +
                     alpha = 0) +
   theme_bw() +
   guides(pattern = "none") + 
-  ggtitle(paste0('Bayesian p-value for ',
-                 ns[1],' (',group,')')) +
+  ggtitle(paste0('Bayesian p-value for ', ns[1])) +
   xlab(ns[-1][[1]]) +
   ylab(ns[-1][[2]]) +
   labs(fill = expression("Bayesian" ~ italic('p') * "-value"))
@@ -727,6 +723,7 @@ plotting functions.
 #| label: tbl-colors
 #| tbl-cap: "Colour and pattern parameters available in all **int3ract** plotting functions. Default colour values are highlighted in their respective colour."
 #| echo: false
+#| cache: true
 
 library(gt)
 
