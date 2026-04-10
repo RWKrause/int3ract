@@ -1,5 +1,6 @@
 ---
 title: "**int3ract**: Johnson--Neyman Technique and Its Three-Way Extension for Frequentist and Bayesian Models in R"
+output-dir: docs
 format:
   pdf:
     keep-tex: true
@@ -7,7 +8,7 @@ format:
     fig-pos: "H"
   html:
     toc: true
-    output-file: docs/index.html
+    output-file: index.html
     number-sections: true
     embed-resources: true
     fig-pos: "H"
