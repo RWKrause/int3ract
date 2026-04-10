@@ -74,7 +74,8 @@ JNK_lm <- function(modelOut,
   if (is.null(theta_3)) {
     vals <- list(range(modelOut$model[[theta_1]], na.rm = TRUE),
                  range(modelOut$model[[theta_2]], na.rm = TRUE))
-    coefs <- modelOut$coefficients[c(theta_1,theta_2,paste0(theta_1,':',theta_2))]
+    coefs <- modelOut$coefficients[c(theta_1,theta_2,
+                                     paste0(theta_1,':',theta_2))]
     name <- c(theta_1,theta_2)
     covar <- covT[c(theta_1,theta_2,paste0(theta_1,':',theta_2)),
                   c(theta_1,theta_2,paste0(theta_1,':',theta_2))]

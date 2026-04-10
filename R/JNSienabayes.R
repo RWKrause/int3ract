@@ -31,298 +31,135 @@
 #' @returns list of plots.
 #' @export
 #'
-#' @import ggplot2
-#' @import ggpattern
-#' @import scales
-#' @import tidyr
-#' @import tibble
 #'
 JNSienaBayes <- function(sbo,
-                         theta_1,
+                         theta_1, 
                          theta_2, 
                          theta_3 = NULL,
                          theta_int_12,
                          theta_int_13 = NULL,
-                         theta_int_23 = NULL,
+                         theta_int_23 = NULL, 
                          theta_int_123 = NULL,
-                         theta_1_vals,
-                         theta_2_vals,
+                         theta_1_vals, 
+                         theta_2_vals, 
                          theta_3_vals = NULL,
-                         burnIn = NULL,
-                         thin = 1,
+                         burnIn = NULL, 
+                         thin = 1, 
                          thresholds = NULL,
-                         hyper_only = TRUE,
-                         round_res = 3,
+                         hyper_only = TRUE, 
+                         round_res = 3, 
                          noTitle = NULL,
-                         color_mid = 'white',
+                         color_mid = 'white', 
                          color_low = '#F05039',
-                         color_high = '#000066',
+                         color_high = '#000066', 
                          color_values = 'grey40',
-                         color_grid = 'black',
+                         color_grid = 'black', 
                          grid_density = 0.01,
-                         grid_spacing = 0.1,
-                         save = FALSE,
+                         grid_spacing = 0.1, 
+                         save = FALSE, 
                          folder = NULL) {
-  eff <- sbo$effects
   
-  deps <- unique(eff$name)
+  eff    <- sbo$effects
+  deps   <- unique(eff$name)
+  folder <- folder %||% 'int3ract JNplots'
   
-  if (is.null(burnIn)) {
-    burnIn <- sbo$nwarm
-    if (burnIn == 0) {
-      burnIn <- 1
-    }
-  }
+  if (is.null(burnIn)) burnIn <- max(sbo$nwarm, 1)
   
-  first_rates <- c()
-  for (i in 1:length(deps)) {
-    first_rates <- c(first_rates,
-                     which(eff$name == deps[i] & 
-                             eff$functionName == 'Amount of network change in period 1'))
-  }
-  
+  first_rates <- sapply(deps, function(d) {
+    which(eff$name == d & 
+            eff$functionName == 'Amount of network change in period 1')})
   rates <- sbo$basicRate
-  rates[first_rates] <- FALSE
+  rates[unlist(first_rates)] <- FALSE
+  eff <- eff[!rates, ]
+  rownames(eff) <- seq_len(nrow(eff))
   
-  eff <- eff[!rates,]
+  clean_name <- function(n) gsub(':', '', gsub('/', 'o', gsub('\\^', '', n)))
   
-  if (is.null(folder)) {
-    folder <- 'int3ract JNplots'
-  }
-  theta_1n <- eff$effectName[theta_1]
-  theta_2n <- eff$effectName[theta_2]
-  theta_1n <- gsub('\\^','',theta_1n)
-  theta_1n <- gsub('\\/','o',theta_1n)
-  theta_1n <- gsub(':','',theta_1n)
-  theta_2n <- gsub('\\^','',theta_2n)
-  theta_2n <- gsub(':','',theta_2n)
-  theta_2n <- gsub('\\/','o',theta_2n)
-  
-  if (is.null(theta_3)) {
-    if (!any(eff$randomEffects[c(theta_1, theta_2, theta_int_12)])) {
-      theta <- sbo$ThinParameters[seq(burnIn,
-                                      nrow(sbo$ThinParameters),
-                                      thin),1,c(theta_1, theta_2, theta_int_12)]
-      returnList <- jnb_support2(theta = theta,
-                                 group = 'Eta',
-                                 sbo = sbo,
-                                 theta_1 = theta_1, 
-                                 theta_2 = theta_2, 
-                                 theta_1n = theta_1n, 
-                                 theta_2n = theta_2n, 
-                                 theta_int_12 = theta_int_12, 
-                                 theta_1_vals = theta_1_vals, 
-                                 theta_2_vals = theta_2_vals,
-                                 save = save,
-                                 folder = folder)
-    } else {
-      rownames(eff) <- 1:nrow(eff)
-      eff_ran <- eff[eff$randomEffects,]
-      
-      thetas <- c(theta_1,theta_2,
-                  theta_int_12)
-      
-      theta <- matrix(NA, 
-                      length(seq(burnIn,
-                                 nrow(sbo$ThinPosteriorMu),
-                                 thin)),3)
-      
-      
-      collumn <- 0
-      for (i in thetas) {
-        collumn <- collumn + 1
-        if (eff$randomEffects[i]) {
-          theta[,collumn] <- sbo$ThinPosteriorMu[seq(burnIn,
-                                                     nrow(sbo$ThinPosteriorMu),
-                                                     thin),
-                                                 which(as.numeric(
-                                                   rownames(eff_ran)) == i)]
-        } else {
-          theta[,collumn] <- sbo$ThinParameters[seq(burnIn,
-                                                    nrow(sbo$ThinParameters),
-                                                    thin),1,i]
-        }
-      }
-      
-      returnList <- jnb_support2(theta = theta,
-                                 group = 'Mu',
-                                 sbo = sbo,
-                                 theta_1 = theta_1, 
-                                 theta_2 = theta_2, 
-                                 theta_1n = theta_1n, 
-                                 theta_2n = theta_2n, 
-                                 theta_int_12 = theta_int_12, 
-                                 theta_1_vals = theta_1_vals, 
-                                 theta_2_vals = theta_2_vals,
-                                 save = save,
-                                 folder = folder)
-      
-      if (!hyper_only) {
-        randomResults <- vector(mode = 'list', length = sbo$nGroup)
-        names(randomResults) <- paste0('group',1:sbo$nGroup)
-        for (i in 1:sbo$nGroup) {
-          theta <- sbo$ThinParameters[seq(burnIn,
-                                          nrow(sbo$ThinParameters),
-                                          thin),
-                                      i,
-                                      c(theta_1, theta_2, theta_int_12)]
-          randomResults[[i]] <- jnb_support2(theta = theta,
-                                             group = paste0('group',i),
-                                             sbo = sbo,
-                                             theta_1 = theta_1, 
-                                             theta_2 = theta_2, 
-                                             theta_1n = theta_1n, 
-                                             theta_2n = theta_2n, 
-                                             theta_int_12 = theta_int_12, 
-                                             theta_1_vals = theta_1_vals, 
-                                             theta_2_vals = theta_2_vals, 
-                                             save = save,
-                                             folder = folder)
-        }
-        returnList <- list(returnList,randomResults)
-        names(returnList) <- c('Mu','random_groups_effects')
-      } 
-    }
-    
+  theta_1n <- clean_name(eff$effectName[theta_1])
+  theta_2n <- clean_name(eff$effectName[theta_2])
+  theta_3n <- if (!is.null(theta_3)) {
+    clean_name(eff$effectName[theta_3])
   } else {
-    theta_3n <- eff$effectName[theta_3]
-    theta_3n <- gsub('\\^','',theta_3n)
-    theta_3n <- gsub('\\/','o',theta_3n)
-    theta_3n <- gsub(':','',theta_3n)
-    if (!any(eff$randomEffects[c(theta_1, theta_2, theta_3, 
-                                 theta_int_12, theta_int_13, theta_int_23,
-                                 theta_int_123)])) {
-      
-      theta <- sbo$ThinParameters[seq(burnIn,
-                                      nrow(sbo$ThinParameters),
-                                      thin),1,c(theta_1, theta_2, theta_3, 
-                                                theta_int_12, theta_int_13, 
-                                                theta_int_23, theta_int_123)]
-      returnList <- jnb_support3(theta = theta,
-                                 group = 'Eta',
-                                 sbo = sbo,
-                                 theta_1 = theta_1, 
-                                 theta_2 = theta_2, 
-                                 theta_3 = theta_3, 
-                                 theta_1n = theta_1n, 
-                                 theta_2n = theta_2n, 
-                                 theta_3n = theta_3n, 
-                                 theta_int_12 = theta_int_12, 
-                                 theta_int_13 = theta_int_13, 
-                                 theta_int_23 = theta_int_23, 
-                                 theta_int_123 = theta_int_123, 
-                                 theta_1_vals = theta_1_vals, 
-                                 theta_2_vals = theta_2_vals, 
-                                 theta_3_vals = theta_3_vals,
-                                 thresholds = thresholds,
-                                 color_mid = color_mid,
-                                 color_low = color_low,
-                                 color_high = color_high,
-                                 color_values = color_values,
-                                 color_grid = color_grid,
-                                 grid_density = grid_density,
-                                 grid_spacing = grid_spacing, 
-                                 save = save,
-                                 folder = folder)
+    NULL
+  }
+  
+  idx <- seq(burnIn, nrow(sbo$ThinParameters), thin)
+  
+  color_args <- list(color_mid = color_mid, 
+                     color_low = color_low,
+                     color_high = color_high, 
+                     color_values = color_values,
+                     color_grid = color_grid, 
+                     grid_density = grid_density,
+                     grid_spacing = grid_spacing)
+  
+  call_support <- function(theta, group, threeWay) {
+    if (threeWay) {
+      do.call(jnb_support3,
+              c(list(theta = theta, 
+                     group = group, 
+                     theta_1 = theta_1, 
+                     theta_2 = theta_2, 
+                     theta_3 = theta_3,
+                     theta_1n = theta_1n, 
+                     theta_2n = theta_2n, 
+                     theta_3n = theta_3n,
+                     theta_int_12 = theta_int_12, 
+                     theta_int_13 = theta_int_13,
+                     theta_int_23 = theta_int_23, 
+                     theta_int_123 = theta_int_123,
+                     theta_1_vals = theta_1_vals, 
+                     theta_2_vals = theta_2_vals,
+                     theta_3_vals = theta_3_vals, 
+                     thresholds = thresholds,
+                     save = save, 
+                     folder = folder),
+                color_args))
     } else {
-      rownames(eff) <- 1:nrow(eff)
-      eff_ran <- eff[eff$randomEffects,]
-      
-      thetas <- c(theta_1,theta_2,theta_3,
-                  theta_int_12,theta_int_13,theta_int_23,
-                  theta_int_123)
-      
-      theta <- matrix(NA, 
-                      length(seq(burnIn,
-                                 nrow(sbo$ThinPosteriorMu),
-                                 thin)),
-                      7)
-      
-      
-      collumn <- 0
-      for (i in thetas) {
-        collumn <- collumn + 1
-        if (eff$randomEffects[i]) {
-          theta[,collumn] <- sbo$ThinPosteriorMu[seq(burnIn,
-                                                     nrow(sbo$ThinPosteriorMu),
-                                                     thin),
-                                                 which(as.numeric(
-                                                   rownames(eff_ran)) == i)]
-        } else {
-          theta[,collumn] <- sbo$ThinParameters[seq(burnIn,
-                                                    nrow(sbo$ThinParameters),
-                                                    thin),1,i]
-        }
-      }
-      
-      returnList <- jnb_support3(theta = theta,
-                                 group = 'Eta',
-                                 sbo = sbo,
-                                 theta_1 = theta_1, 
-                                 theta_2 = theta_2, 
-                                 theta_3 = theta_3, 
-                                 theta_1n = theta_1n, 
-                                 theta_2n = theta_2n, 
-                                 theta_3n = theta_3n, 
-                                 theta_int_12 = theta_int_12, 
-                                 theta_int_13 = theta_int_13, 
-                                 theta_int_23 = theta_int_23, 
-                                 theta_int_123 = theta_int_123, 
-                                 theta_1_vals = theta_1_vals, 
-                                 theta_2_vals = theta_2_vals, 
-                                 theta_3_vals = theta_3_vals,
-                                 thresholds = thresholds,
-                                 color_mid = color_mid,
-                                 color_low = color_low,
-                                 color_high = color_high,
-                                 color_values = color_values,
-                                 color_grid = color_grid,
-                                 grid_density = grid_density,
-                                 grid_spacing = grid_spacing, 
-                                 save = save,
-                                 folder = folder)
-      
-      if (!hyper_only) {
-        randomResults <- vector(mode = 'list', length = sbo$nGroup)
-        names(randomResults) <- paste0('group',1:sbo$nGroup)
-        for (i in 1:sbo$nGroup) {
-          theta <- sbo$ThinParameters[seq(burnIn,
-                                          nrow(sbo$ThinParameters),
-                                          thin),
-                                      i,thetas]
-          randomResults[[i]] <- jnb_support3(theta = theta,
-                                             group = paste0('group',i),
-                                             sbo = sbo,
-                                             theta_1 = theta_1, 
-                                             theta_2 = theta_2, 
-                                             theta_3 = theta_3, 
-                                             theta_1n = theta_1n, 
-                                             theta_2n = theta_2n, 
-                                             theta_3n = theta_3n, 
-                                             theta_int_12 = theta_int_12, 
-                                             theta_int_13 = theta_int_13, 
-                                             theta_int_23 = theta_int_23, 
-                                             theta_int_123 = theta_int_123, 
-                                             theta_1_vals = theta_1_vals, 
-                                             theta_2_vals = theta_2_vals, 
-                                             theta_3_vals = theta_3_vals,
-                                             thresholds = thresholds,
-                                             color_mid = color_mid,
-                                             color_low = color_low,
-                                             color_high = color_high,
-                                             color_values = color_values,
-                                             color_grid = color_grid,
-                                             grid_density = grid_density,
-                                             grid_spacing = grid_spacing, 
-                                             save = save,
-                                             folder = folder)
-        }
-        returnList <- list(returnList,randomResults)
-        names(returnList) <- c('Mu','random_groups_effects')
-      } 
+      do.call(jnb_support2,
+              list(theta = theta, 
+                   group = group, 
+                   theta_1 = theta_1, 
+                   theta_2 = theta_2,
+                   theta_1n = theta_1n,
+                   theta_2n = theta_2n,
+                   theta_int_12 = theta_int_12,
+                   theta_1_vals = theta_1_vals, 
+                   theta_2_vals = theta_2_vals,
+                   save = save, 
+                   folder = folder))
     }
   }
   
+  threeWay <- !is.null(theta_3)
+  thetas   <- if (threeWay) {
+    c(theta_1, theta_2, theta_3, theta_int_12, 
+      theta_int_13, theta_int_23, theta_int_123)
+  } else { 
+    c(theta_1, theta_2, theta_int_12)
+  }
   
-  return(returnList)
+  any_random <- any(eff$randomEffects[thetas])
+  
+  if (!any_random) {
+    theta <- sbo$ThinParameters[idx, 1, thetas]
+    return(call_support(theta, 'Eta', threeWay))
+  }
+  
+  theta      <- extract_theta(thetas)
+  returnList <- call_support(theta, 'Mu', threeWay)
+  
+  if (!hyper_only) {
+    randomResults <- setNames(
+      lapply(seq_len(sbo$nGroup), function(i) {
+        theta_g <- sbo$ThinParameters[idx, i, thetas]
+        call_support(theta_g, paste0('group', i), threeWay)
+      }),
+      paste0('group', seq_len(sbo$nGroup))
+    )
+    returnList <- setNames(list(returnList, randomResults),
+                           c('Mu', 'random_groups_effects'))
+  }
+  
+  returnList
 }

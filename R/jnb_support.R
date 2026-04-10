@@ -10,12 +10,11 @@
 #' @param group character; label identifying the parameter source, either
 #'   \code{'Eta'} for fixed effects, \code{'Mu'} for the hyper-mean of random
 #'   effects, or \code{'group<i>'} for group-specific random effects.
-#' @param sbo multiSiena; the \code{multiSiena()} output object. Used to access
-#'   model metadata such as the number of groups.
+
 #' @param theta_1 numeric; index of the first parameter in the (rate-excluded)
-#'   effects object. See \code{sbo$effects[sbo$effects$type != 'rate',]}.
+#'   effects object. See \code{modelOut$effects[modelOut$effects$type != 'rate',]}.
 #' @param theta_2 numeric; index of the second parameter in the (rate-excluded)
-#'   effects object. See \code{sbo$effects[sbo$effects$type != 'rate',]}.
+#'   effects object. See \code{modelOut$effects[modelOut$effects$type != 'rate',]}.
 #' @param theta_1n character; display name for theta_1, derived from
 #'   \code{effectName} with special characters stripped.
 #' @param theta_2n character; display name for theta_2, derived from
@@ -48,185 +47,46 @@
 #' @import tidyr
 #' @import tibble
 #'
-jnb_support2 <- function(theta,
-                         group,
-                         sbo = sbo,
-                         theta_1 = theta_1, 
-                         theta_2 = theta_2, 
-                         theta_1n = theta_1n, 
-                         theta_2n = theta_2n, 
-                         theta_int_12 = theta_int_12, 
-                         theta_1_vals = theta_1_vals, 
-                         theta_2_vals = theta_2_vals, 
-                         save = save,
-                         folder = folder) { 
+jnb_support2 <- function(theta, 
+                         group, 
+                         theta_1,
+                         theta_2,
+                         theta_1n,
+                         theta_2n,
+                         theta_int_12,
+                         theta_1_vals,
+                         theta_2_vals,
+                         save, folder) {
   
+  theta_1x <- as.vector(outer(theta[, 3], theta_2_vals, `*`)) + theta[, 1]
+  theta_2x <- as.vector(outer(theta[, 3], theta_1_vals, `*`)) + theta[, 2]
   
-  theta_1x <- as.vector(outer(theta[,3] , theta_2_vals, FUN = '*')) + theta[,1]
-  theta_2x <- as.vector(outer(theta[,3] , theta_1_vals, FUN = '*')) + theta[,2]
-  
-  t1plotData <- data.frame(modValue = as.factor(rep(round(theta_2_vals,3),
-                                                    each = nrow(theta))),
-                           parameter = theta_1x,
+  t1plotData <- data.frame(modValue  = as.factor(rep(round(theta_2_vals, 3),
+                                                     each = nrow(theta))),
+                           parameter = theta_1x, 
                            group = group)
+  t2plotData <- data.frame(modValue  = as.factor(rep(round(theta_1_vals, 3),
+                                                     each = nrow(theta))),
+                           parameter = theta_2x, group = group)
   
-  t2plotData <- data.frame(modValue = as.factor(rep(round(theta_1_vals,3),
-                                                    each = nrow(theta))),
-                           parameter = theta_2x,
-                           group = group)
+  t1d <- make_td(theta_1x, theta_2_vals, theta_1n, theta_2n)
+  t2d <- make_td(theta_2x, theta_1_vals, theta_2n, theta_1n)
   
-  t1d <- t1plotData |>
-    summarize(thetaPostMean = mean(parameter),
-              thetaPostSD = sd(parameter),
-              bayes_p = sum(parameter > 0) / length(parameter),
-              thetaPost2.5    = quantile(parameter,0.025),
-              thetaPost97.5   = quantile(parameter,0.975),
-              .by = modValue
-    )
-  
-  
-  t2d <- t2plotData |>
-    summarize(thetaPostMean = mean(parameter),
-              thetaPostSD = sd(parameter),
-              bayes_p = sum(parameter > 0) / length(parameter),
-              thetaPost2.5    = quantile(parameter,0.025),
-              thetaPost97.5   = quantile(parameter,0.975),
-              .by = modValue
-    )
-  
-  t1d <- cbind(data.frame(theta     = rep(theta_1n,length(theta_2_vals)),
-                          moderator = rep(theta_2n,length(theta_2_vals))),
-               t1d)
-  
-  t2d <- cbind(data.frame(theta     = rep(theta_2n,length(theta_1_vals)),
-                          moderator = rep(theta_1n,length(theta_1_vals))),
-               t2d)
-  
-  
-  g1 <- ggplot(t1plotData, aes(x = parameter)) +
-    geom_vline(xintercept = 0) +
-    geom_density(alpha = 0.1, aes(fill = modValue, color = modValue)) +
-    theme_bw()
-  
-  if (nchar(theta_2n) < 26) {
-    g1 <- g1 + 
-      labs(title = paste0('Posterior density for ',
-                          theta_1n,
-                          '\n moderated by ',
-                          theta_2n,
-                          ' (',
-                          group,
-                          ')'),
-           x = theta_1n,
-           y = 'Posterior Density',
-           color = theta_2n,
-           fill = theta_2n)
-  } else {
-    g1 <- g1 + 
-      labs(title = paste0('Posterior density for ',
-                          theta_1n,
-                          '\n moderated by ',
-                          theta_2n,
-                          ' (',
-                          group,
-                          ')'),
-           x = theta_1n,
-           y = 'Posterior Density',
-           color = 'Moderator',
-           fill = 'Moderator')
-  }
-  
-  
-  g2 <- ggplot(t2plotData, aes(x = parameter)) +
-    geom_vline(xintercept = 0) +
-    geom_density(alpha = 0.1, aes(fill = modValue, color = modValue))  +
-    theme_bw()
-  
-  if (nchar(theta_1n) < 26) {
-    g2 <- g2 + 
-      labs(title = paste0('Posterior density for ',
-                          theta_2n,
-                          '\n moderated by ',
-                          theta_1n,
-                          ' (',
-                          group,
-                          ')'),
-           x = theta_2n,
-           y = 'Posterior Density',
-           color = theta_1n,
-           fill = theta_1n)
-  } else {
-    g2 <- g2 + 
-      labs(title = paste0('Posterior density for ',
-                          theta_2n,
-                          '\n moderated by ',
-                          theta_1n,
-                          ' (',
-                          group,
-                          ')'),
-           x = theta_2n,
-           y = 'Posterior Density',
-           color = 'Moderator',
-           fill = 'Moderator') 
-  }
-  
-  if (grepl('group',group)) {
-    g1n <- paste0(folder,
-                  '/Posterior density for ',
-                  theta_1n,
-                  ' moderated by ',
-                  theta_2n,
-                  ' (',
-                  group,
-                  ')',
-                  '.png')
-    
-    g2n <- paste0(folder,
-                  '/Posterior density for ',
-                  theta_2n,
-                  ' moderated by ',
-                  theta_1n,
-                  ' (',
-                  group,
-                  ')',
-                  '.png')
-  } else {
-    g1n <- paste0(folder,
-                  '/Posterior density for ',
-                  theta_1n,
-                  ' moderated by ',
-                  theta_2n,
-                  ' (',
-                  group,
-                  ')',
-                  '.png')
-    
-    g2n <- paste0(folder,
-                  '/Posterior density for ',
-                  theta_2n,
-                  ' moderated by ',
-                  theta_1n,
-                  ' (',
-                  group,
-                  ')',
-                  '.png')
-    
-    plot(g1)
-    plot(g2)
-  }
+  g1  <- make_plot(t1plotData, theta_1n, theta_2n)
+  g2  <- make_plot(t2plotData, theta_2n, theta_1n)
   
   if (save) {
-    ggsave(g1n, plot = g1, dpi = 600, width = 10, height = 10)
-    ggsave(g2n, plot = g2, dpi = 600, width = 10, height = 10)
+    ggplot2::ggsave(make_path(theta_1n, theta_2n), plot = g1, dpi = 600,
+                    width = 10, height = 10)
+    ggplot2::ggsave(make_path(theta_2n, theta_1n), plot = g2, dpi = 600,
+                    width = 10, height = 10)
   }
- 
   
-  returnList <- list(t1d,t2d,g1,g2)
-  names(returnList) <- c(paste(theta_1n, '_table'),
-                         paste(theta_2n, '_table'),
-                         paste(theta_1n, '_ggplot'),
-                         paste(theta_2n, '_ggplot'))
-  return(returnList)
+  setNames(list(t1d, t2d, g1, g2),
+           c(paste(theta_1n, "_table"), 
+             paste(theta_2n, "_table"),
+             paste(theta_1n, "_plot"),
+             paste(theta_2n, "_plot")))
 }
 
 #' Support function for 3-way JN plots for Bayesian SAOMs
@@ -245,9 +105,8 @@ jnb_support2 <- function(theta,
 #' @param group character; label identifying the parameter source, either
 #'   \code{'Eta'} for fixed effects, \code{'Mu'} for the hyper-mean of random
 #'   effects, or \code{'group<i>'} for group-specific random effects.
-#' @param sbo multiSiena; the \code{multiSiena()} output object.
 #' @param theta_1 numeric; index of the first parameter in the (rate-excluded)
-#'   effects object. See \code{sbo$effects[sbo$effects$type != 'rate',]}.
+#'   effects object. See \code{modelOut$effects[modelOut$effects$type != 'rate',]}.
 #' @param theta_2 numeric; index of the second parameter in the (rate-excluded)
 #'   effects object.
 #' @param theta_3 numeric; index of the third parameter in the (rate-excluded)
@@ -307,7 +166,6 @@ jnb_support2 <- function(theta,
 #'
 jnb_support3 <- function(theta,
                          group,
-                         sbo = sbo,
                          theta_1 = theta_1, 
                          theta_2 = theta_2, 
                          theta_3 = theta_3, 
@@ -328,247 +186,90 @@ jnb_support3 <- function(theta,
                          color_values = color_values,
                          color_grid = color_grid,
                          grid_density = grid_density,
-                         grid_spacing = grid_spacing) { 
-  
+                         grid_spacing = grid_spacing,
+                         save = save, 
+                         folder = folder) { 
   nt <- nrow(theta)
-  n1 <- nt * length(theta_2_vals) * length(theta_3_vals)
   
-  t1plotData <- data.frame(mod1      = rep(NA,n1),
-                           mod1Val   = rep(NA,n1),
-                           mod2      = rep(NA,n1),
-                           mod2Val   = rep(NA,n1),
-                           parameter = rep(NA,n1))  
+  t1d <- make_plot_data(theta, theta_2_vals, theta_3_vals,
+                        theta_1n, theta_2n, theta_3n,
+                        theta_cols = c(1, 4, 5, 7), thresholds)
   
-  count <- 0
-  for (i in 1:length(theta_2_vals)) {
-    for (j in 1:length(theta_3_vals)) {
-      count <- count + 1
-      thetaX <- theta[,1] + theta_2_vals[i] * theta[,4] + 
-        theta_3_vals[j] * theta[,5] +
-        theta_2_vals[i] * theta_3_vals[j] * theta[,7]
-      t1plotData$mod1[(-nt + count * nt + 1):(count * nt)]      <- theta_2n
-      t1plotData$mod1Val[(-nt + count * nt + 1):(count * nt)]   <- theta_2_vals[i]
-      t1plotData$mod2[(-nt + count * nt + 1):(count * nt)]      <- theta_3n
-      t1plotData$mod2Val[(-nt + count * nt + 1):(count * nt)]   <- theta_3_vals[j]
-      t1plotData$parameter[(-nt + count * nt + 1):(count * nt)] <- thetaX
-    }
-  }
+  t2d <- make_plot_data(theta, theta_1_vals, theta_3_vals,
+                        theta_2n, theta_1n, theta_3n,
+                        theta_cols = c(2, 4, 6, 7), thresholds)
   
-  n2 <- nt * length(theta_1_vals) * length(theta_3_vals)
+  t3d <- make_plot_data(theta, theta_1_vals, theta_2_vals,
+                        theta_3n, theta_1n, theta_2n,
+                        theta_cols = c(3, 5, 6, 7), thresholds)
   
-  t2plotData <- data.frame(mod1      = rep(NA,n2),
-                           mod1Val   = rep(NA,n2),
-                           mod2      = rep(NA,n2),
-                           mod2Val   = rep(NA,n2),
-                           parameter = rep(NA,n2))  
+  ns               <- c(theta_1n, theta_2n, theta_3n)
+  tables           <- list(t1d, t2d, t3d)
+  names(tables)    <- ns
+  plotsMean        <- vector(mode = "list", length = 3)
+  names(plotsMean) <- ns
+  plotsP           <- plotsMean
   
-  count <- 0
-  for (i in 1:length(theta_1_vals)) {
-    for (j in 1:length(theta_3_vals)) {
-      count <- count + 1
-      thetaX <- theta[,2] + theta_1_vals[i] * theta[,4] + 
-        theta_3_vals[j] * theta[,6] +
-        theta_1_vals[i] * theta_3_vals[j] * theta[,7]
-      t2plotData$mod1[(-nt + count * nt + 1):(count * nt)]      <- theta_1n
-      t2plotData$mod1Val[(-nt + count * nt + 1):(count * nt)]   <- theta_1_vals[i]
-      t2plotData$mod2[(-nt + count * nt + 1):(count * nt)]      <- theta_3n
-      t2plotData$mod2Val[(-nt + count * nt + 1):(count * nt)]   <- theta_3_vals[j]
-      t2plotData$parameter[(-nt + count * nt + 1):(count * nt)] <- thetaX
-    }
-  }
-  
-  n3 <- nt * length(theta_1_vals) * length(theta_2_vals)
-  
-  t3plotData <- data.frame(mod1      = rep(NA,n3),
-                           mod1Val   = rep(NA,n3),
-                           mod2      = rep(NA,n3),
-                           mod2Val   = rep(NA,n3),
-                           parameter = rep(NA,n3))  
-  
-  count <- 0
-  for (i in 1:length(theta_1_vals)) {
-    for (j in 1:length(theta_2_vals)) {
-      count <- count + 1
-      thetaX <- theta[,3] + theta_1_vals[i] * theta[,5] + 
-        theta_2_vals[j] * theta[,6] +
-        theta_1_vals[i] * theta_2_vals[j] * theta[,7]
-      t3plotData$mod1[(-nt + count * nt + 1):(count * nt)]      <- theta_1n
-      t3plotData$mod1Val[(-nt + count * nt + 1):(count * nt)]   <- theta_1_vals[i]
-      t3plotData$mod2[(-nt + count * nt + 1):(count * nt)]      <- theta_2n
-      t3plotData$mod2Val[(-nt + count * nt + 1):(count * nt)]   <- theta_2_vals[j]
-      t3plotData$parameter[(-nt + count * nt + 1):(count * nt)] <- thetaX
-    }
-  }
-  
-  
-  t1d <- t1plotData |>
-    dplyr::summarize(thetaPostMean = mean(parameter),
-              thetaPostSD = sd(parameter),
-              bayes_p = sum(parameter > 0) / length(parameter),
-              thetaPost2.5    = quantile(parameter,0.025),
-              thetaPost97.5   = quantile(parameter,0.975),
-              .by = c(mod1Val,mod2Val)
-    )
-  
-  
-  t2d <- t2plotData |>
-    dplyr::summarize(thetaPostMean = mean(parameter),
-              thetaPostSD = sd(parameter),
-              bayes_p = sum(parameter > 0) / length(parameter),
-              thetaPost2.5    = quantile(parameter,0.025),
-              thetaPost97.5   = quantile(parameter,0.975),
-              .by = c(mod1Val,mod2Val)
-    )  
-  
-  t3d <- t3plotData |>
-    dplyr::summarize(thetaPostMean = mean(parameter),
-              thetaPostSD = sd(parameter),
-              bayes_p = sum(parameter > 0) / length(parameter),
-              thetaPost2.5    = quantile(parameter,0.025),
-              thetaPost97.5   = quantile(parameter,0.975),
-              .by = c(mod1Val,mod2Val)
-    )
-  
-  
-  t1d <- cbind(data.frame(theta = rep(theta_1n,nrow(t1d)),
-                          mod1  = rep(theta_2n,nrow(t1d)),
-                          mod2  = rep(theta_3n,nrow(t1d))),
-               t1d)
-  
-  t2d <- cbind(data.frame(theta = rep(theta_2n,nrow(t2d)),
-                          mod1  = rep(theta_1n,nrow(t2d)),
-                          mod2  = rep(theta_3n,nrow(t2d))),
-               t2d)
-  
-  t3d <- cbind(data.frame(theta = rep(theta_3n,nrow(t3d)),
-                          mod1  = rep(theta_1n,nrow(t3d)),
-                          mod2  = rep(theta_2n,nrow(t3d))),
-               t3d)
-  
-  
-  t1d$sig <- t1d$bayes_p <= min(thresholds) |
-    t1d$bayes_p >= max(thresholds)
-  
-  t2d$sig <- t2d$bayes_p <= min(thresholds) |
-    t2d$bayes_p >= max(thresholds)
-  
-  t3d$sig <- t3d$bayes_p <= min(thresholds) |
-    t3d$bayes_p >= max(thresholds)
-  
-  t1d$pattern <- ifelse(!t1d$sig, "crosshatch",'none')
-  t2d$pattern <- ifelse(!t2d$sig, "crosshatch",'none')
-  t3d$pattern <- ifelse(!t3d$sig, "crosshatch",'none')
-  
-  ns <- c(theta_1n,theta_2n,theta_3n)
-  plotsMean <- vector(mode = 'list', length = 3)
-  tables <- list(t1d,t2d,t3d)
-  
-  names(plotsMean) <- names(tables) <- ns
-  
-  plotsP <- plotsMean
-  
+
   for (i in 1:3) {
-    pat <- tables[[i]][!tables[[i]]$sig,]
+    pat      <- tables[[i]][!tables[[i]]$sig, ]
+    mods_out <- ns[-i]  
     
-    plotsMean[[i]] <- ggplot(tables[[i]], aes(mod1Val, mod2Val)) +
-      geom_tile(aes(fill = thetaPostMean )) +
-      scale_color_identity() +
-      scale_fill_gradient2(low = color_low, 
-                           high = color_high,
-                           mid = color_mid,
-                           midpoint = 0) +
-      geom_tile_pattern(data = pat, aes(pattern = pattern),
-                        pattern_density = grid_density,
-                        pattern_spacing = grid_spacing,
-                        pattern_color = color_grid,
-                        alpha = 0) +
-      theme_bw() +
-      guides(pattern = "none") + 
-      ggtitle(paste0('Average posterior density for ',
-                     ns[i],' (',group,')')) +
-      xlab(ns[-i][[1]]) +
-      ylab(ns[-i][[2]]) +
-      labs(fill = "Posterior Mean")
+    mod_str  <- paste0(mods_out[[1]], 
+                       " and ", 
+                       mods_out[[2]], 
+                       " (", group, ")")
+    base_path <- file.path(folder,
+                           paste0("%s for ", 
+                                  ns[i], 
+                                  " moderated by ", 
+                                  mod_str, ".png"))
     
+    plotsMean[[i]] <- make_heatmap(
+      data       = tables[[i]],
+      fill_var   = "thetaPostMean",
+      midpoint   = 0,
+      title      = paste0("Average posterior density for ", 
+                          ns[i], 
+                          " (", group, ")"),
+      xlab       = mods_out[[1]],
+      ylab       = mods_out[[2]],
+      fill_label = "Posterior Mean",
+      pat = pat, 
+      color_low = color_low, 
+      color_mid = color_mid,
+      color_high = color_high, 
+      grid_density = grid_density,
+      grid_spacing = grid_spacing, 
+      color_grid = color_grid
+    )
     
-    plotsP[[i]] <- ggplot(tables[[i]], aes(mod1Val, mod2Val)) +
-      geom_tile(aes(fill = bayes_p)) +
-      scale_color_identity() +
-      scale_fill_gradient2(low = color_low, 
-                           high = color_high,
-                           mid = color_mid,
-                           midpoint = 0.5) +
-      geom_tile_pattern(data = pat, aes(pattern = pattern),
-                        pattern_density = grid_density,
-                        pattern_spacing = grid_spacing,
-                        pattern_color = color_grid,
-                        alpha = 0) +
-      theme_bw() +
-      guides(pattern = "none") + 
-      ggtitle(paste0('Bayesian p-value for ',
-                     ns[i],' (',group,')')) +
-      xlab(ns[-i][[1]]) +
-      ylab(ns[-i][[2]]) +
-      labs(fill = expression("Bayesian" ~ italic('p') * "-value"))
-    
-    if (grepl('group',group)) {
-      plotName <- paste0(folder,
-                         '/Posterior density for ',
-                         ns[i],
-                         ' moderated by ',
-                         ns[-i][[1]], 
-                         ' and ',
-                         ns[-i][[2]],
-                         ' (',
-                         group,
-                         ')',
-                         '.png')
-      plotNameP <- paste0(folder,
-                          '/Bayesian p-value for ',
-                          ns[i],
-                          ' moderated by ',
-                          ns[-i][[1]], 
-                          ' and ',
-                          ns[-i][[2]],
-                          ' (',
-                          group,
-                          ')',
-                          '.png')
-    } else {
-      plotName <- paste0(folder,
-                         '/Posterior density for ',
-                         ns[i],
-                         ' moderated by ',
-                         ns[-i][[1]], 
-                         ' and ',
-                         ns[-i][[2]],
-                         ' (',
-                         group,
-                         ')',
-                         '.png')
-      plotNameP <- paste0(folder,
-                          '/Bayesian p-value for ',
-                          ns[i],
-                          ' moderated by ',
-                          ns[-i][[1]], 
-                          ' and ',
-                          ns[-i][[2]],
-                          ' (',
-                          group,
-                          ')',
-                          '.png')
-    }
+    plotsP[[i]] <- make_heatmap(
+      data       = tables[[i]],
+      fill_var   = "bayes_p",
+      midpoint   = 0.5,
+      title      = paste0("Bayesian p-value for ", 
+                          ns[i], 
+                          " (", group, ")"),
+      xlab       = mods_out[[1]],
+      ylab       = mods_out[[2]],
+      fill_label = expression("Bayesian" ~ italic("p") * "-value"),
+      pat = pat, 
+      color_low = color_low, 
+      color_mid = color_mid,
+      color_high = color_high, 
+      grid_density = grid_density,
+      grid_spacing = grid_spacing, 
+      color_grid = color_grid
+    )
     
     if (save) {
-      ggsave(plotName,  plot = plotsMean[[i]], dpi = 600, 
-             width = 10, height = 10)
-      ggsave(plotNameP, plot = plotsP[[i]],    dpi = 600, 
-             width = 10, height = 10)
+      ggplot2::ggsave(sprintf(base_path, "Posterior density"),
+             plot = plotsMean[[i]], dpi = 600, width = 10, height = 10)
+      ggplot2::ggsave(sprintf(base_path, "Bayesian p-value"),
+             plot = plotsP[[i]],   dpi = 600, width = 10, height = 10)
     }
-
   }
-  
-  
   
   returnList <- list(tables,plotsMean,plotsP)
   names(returnList) <- c('result_tables',
