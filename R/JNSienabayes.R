@@ -117,7 +117,7 @@ JNSienaBayes <- function(sbo,
                 color_args))
     } else {
       do.call(jnb_support2,
-              c(list(theta = theta, 
+              list(theta = theta, 
                    group = group, 
                    theta_1 = theta_1, 
                    theta_2 = theta_2,
@@ -126,9 +126,11 @@ JNSienaBayes <- function(sbo,
                    theta_int_12 = theta_int_12,
                    theta_1_vals = theta_1_vals, 
                    theta_2_vals = theta_2_vals,
+                   color_mid = color_mid, 
+                   color_low = color_low,
+                   color_high = color_high,
                    save = save, 
-                   folder = folder),
-                color_args))
+                   folder = folder))
     }
   }
   
