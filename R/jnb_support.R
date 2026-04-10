@@ -46,7 +46,6 @@
 #' @import scales
 #' @import tidyr
 #' @import tibble
-#' @import wesanderson
 #'
 jnb_support2 <- function(theta, 
                          group, 
