@@ -146,6 +146,16 @@ JNSienaBayes <- function(sbo,
     return(call_support(theta, 'Eta', threeWay))
   }
   
+  extract_theta <- function(thetas) {
+    eff_ran <- eff[eff$randomEffects, ]
+    t(sapply(thetas, function(i) {
+      if (eff$randomEffects[i]) {
+        sbo$ThinPosteriorMu[idx, which(as.numeric(rownames(eff_ran)) == i)]
+      } else {
+        sbo$ThinParameters[idx, 1, i]
+      }
+    })) |> t()   
+  }
   theta      <- extract_theta(thetas)
   returnList <- call_support(theta, 'Mu', threeWay)
   
