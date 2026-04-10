@@ -133,11 +133,11 @@ jnb_support2 <- function(theta,
   g1  <- make_plot(t1plotData, theta_1n, theta_2n,
                    color_mid = color_mid,
                    color_low = color_low,
-                   color_high = color_high,)
+                   color_high = color_high)
   g2  <- make_plot(t2plotData, theta_2n, theta_1n,
                    color_mid = color_mid,
                    color_low = color_low,
-                   color_high = color_high,)
+                   color_high = color_high)
   
   if (save) {
     ggplot2::ggsave(make_path(theta_1n, theta_2n), plot = g1, dpi = 600,
@@ -276,7 +276,7 @@ jnb_support3 <- function(theta,
                                     high = color_high,
                                     mid = color_mid, 
                                     midpoint = midpoint) +
-      ggplot2::geom_tile_pattern(data = pat, 
+      ggpattern::geom_tile_pattern(data = pat, 
                                  ggplot2::aes(pattern = pattern),
                                  pattern_density = grid_density,
                                  pattern_spacing = grid_spacing,

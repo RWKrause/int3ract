@@ -22,12 +22,14 @@ abstract: |
   **int3ract** package for R implements the JN technique and its three-way
   extension (the Johnson--Neyman--Krause, or JNK, technique) for both
   frequentist and Bayesian models. The core function `JNK_int()`
-  can be applied to multiplicative interactions from (virtually) any model family. Dedicated
+  can be applied to multiplicative interactions from (virtually) any model
+  family. Dedicated
   wrappers (`JNK_lm()` and `JNK_siena()`) streamline the workflow for
   models fitted via `lm()`/`glm()` and **RSiena**'s `siena()`,
   respectively. For Bayesian Stochastic Actor-Oriented Models (SAOMs)
-  estimated with **multiSiena**, the function `JNSienaBayes()` produces conditional 
-  posterior distributions. For two-way interactions, classic shaded confidence-band plots  are created that visually demarcate significant and
+  estimated with **multiSiena**, the function `JNSienaBayes()` produces
+  conditional posterior distributions. For two-way interactions, classic shaded
+  confidence-band plots  are created that visually demarcate significant and
   non-significant regions along the moderator range; three-way interactions
   yield colour-gradient heatmaps with optional crosshatch overlays for
   non-significant regions. The package is designed to encourage richer,
@@ -181,7 +183,8 @@ Because the significance region is now two-dimensional, it cannot be depicted
 as a simple interval on a line. **int3ract** instead renders a heatmap of
 conditional point estimates $\hat{\theta}_X(m, w)$ using a diverging
 colour scale, and superimposes a crosshatch pattern over cells where the null
-hypothesis $\theta_X = 0$ should be rejected given the chosen $\alpha$-threshold (default: `threshold = 0.05`).
+hypothesis $\theta_X = 0$ should be rejected given the chosen $\alpha$-threshold
+(default: `threshold = 0.05`).
 
 ## Package Architecture {#sec-package}
 
@@ -194,7 +197,9 @@ The package is organised into four layers, summarised in @tbl-hierarchy.
 | `JNSienaBayes()` | `multiSiena` (Bayesian) | `jnb_support2()`, `jnb_support3()` |
 | `JNK_int()` | *any* (generic) | `parFun()`, `seFun()` |
 
-: Function hierarchy of **int3ract**. User-facing wrappers extract the relevant coefficients and covariance sub-matrix from the model object and pass them to the appropriate engine. {#tbl-hierarchy}
+: Function hierarchy of **int3ract**. User-facing wrappers extract the relevant
+coefficients and covariance sub-matrix from the model object and pass them to
+the appropriate engine. {#tbl-hierarchy}
 
 **Utility layer (`utils.R`).**  
 `parFun()` and `seFun()` implement @eq-theta3way and @eq-se3way. 
@@ -203,10 +208,10 @@ The package is organised into four layers, summarised in @tbl-hierarchy.
 The function `JNK_int()` accepts `name` (character vector of variable names),
 `coefs` (named numeric vector of model coefficients), `covar` (the
 corresponding covariance sub-matrix), and `vals` (a list of moderator value
-ranges). When a 2-way interaction is analysed, it returns two ribbon plots and two data
-frames; when a 3-way interaction, it returns three heatmaps together with the
-underlying matrices of point estimates, standard errors, $p$-values, and
-significance indicators.
+ranges). When a 2-way interaction is analysed, it returns two ribbon plots and
+two data frames; when a 3-way interaction, it returns three heatmaps together
+with the underlying matrices of point estimates, standard errors, $p$-values,
+and significance indicators.
 
 Crucially, `JNK_int()` is model-agnostic. Any researcher who can extract a
 coefficient vector and covariance matrix from their model (whether fitted by
@@ -230,8 +235,9 @@ times for different dependent variables and/or as different effect types, making
 **Bayesian engine (`JNSienaBayes()`, `jnb_support2()`, `jnb_support3()`).**  
 For Bayesian SAOMs there is no single-point estimate or analytic covariance
 matrix. Instead, conditional posteriors will be used. `JNSienaBayes()` handles
- burn-in removal and thinning, detects whether each parameter was estimated as
- fixed ($\eta$) or random ($\mu$), and routes to `jnb_support2()` for 2-way interactions or `jnb_support3()` for 3-way interactions.
+burn-in removal and thinning, detects whether each parameter was estimated as
+fixed ($\eta$) or random ($\mu$), and routes to `jnb_support2()` for 2-way
+interactions or `jnb_support3()` for 3-way interactions.
 
 For two-way interactions, `jnb_support2()` computes the conditional posterior
 draws
@@ -302,7 +308,11 @@ jn2$plots$z
 ```
 
 The returned list `jn2` contains `$param_table`, a list of two data frames
-(one per each variable involved in the interactions) with columns for the moderator values (`mod_vals`), conditional parameter, its standard error, and $p$-value (`theta_vals`, `theta_se`, and `theta_p`), and a logical whether it is significant given the chosen `threshold`; and `$plots`, a list of two **ggplot2** objects.
+(one per each variable involved in the interactions) with columns for the
+moderator values (`mod_vals`), conditional parameter, its standard error, and
+$p$-value (`theta_vals`, `theta_se`, and `theta_p`), and a logical whether it is
+significant given the chosen `threshold`; and `$plots`, a list of two
+**ggplot2** objects.
 
 In each plot the ribbon is filled with `sig_color` (default `'seagreen3'`)
 where $|z| > z_{\alpha/2}$ and with `non_sig_color` (default `'chocolate'`)
@@ -395,7 +405,9 @@ x3 <- JNK_siena(res,
 
 The moderator value ranges (`theta_1vals`, `theta_2vals`, `theta_3vals`)
 should reflect the empirical support of the corresponding change statistics.
-By default `range_size = 500` equidistant points are drawn from these ranges. The returned tables and plots are named as derived from the model using the `name' column in the **RSiena** effects object.
+By default `range_size = 500` equidistant points are drawn from these ranges.
+The returned tables and plots are named as derived from the model using the
+`name' column in the **RSiena** effects object.
 
 ### Direct Use of `JNK_int()`
 
@@ -447,8 +459,8 @@ and 2.5th and 97.5th percentiles of the conditional posterior for each moderator
 value.
 
 When `hyper_only = FALSE` and at least one of the involved parameters is
-randomly varying between groups, `JNSienaBayes()` additionally loops over all $G$ groups and produces
-group-specific plots and tables, returned under the key
+randomly varying between groups, `JNSienaBayes()` additionally loops over all
+$G$ groups and produces group-specific plots and tables, returned under the key
 `random_groups_effects`. This is useful for assessing heterogeneity of
 interaction effects across networks. Two additional arguments are helpful 
 when many plots are made: `save = TRUE` will save each plot with `ggsave()`. 
@@ -494,7 +506,12 @@ jnb2 <- JNSienaBayes(sbo          = my_multiSiena_result,
 #|    variance when reciprocity would decrease (i.e., a reciprocal tie to
 #|    someone with negative values on the covariate would be broken,
 #|    leading to -1 in recirpocity but overall an increase in altX)."
-#|   - "Posterior densities for reciprocity conditional on simultaneous changes in altX. Here, while generally positive, reciprocity only has a consistently positive effect on tie formation when altX changes moderately, around -1 to 1 (yellow curves). While reciprocity gets more positive with increasing values in the change of altX, the posterior variance increases as well."
+#|   - "Posterior densities for reciprocity conditional on simultaneous changes
+#|    in altX. Here, while generally positive, reciprocity only has a
+#|    consistently positive effect on tie formation when altX changes
+#|    moderately, around -1 to 1 (yellow curves). While reciprocity gets more
+#|    positive with increasing values in the change of altX, the posterior
+#|    variance increases as well."
 #| layout: [[1]]
 #| fig-width: 4.5
 #| fig-height: 3
@@ -736,7 +753,9 @@ see `?ggplot2::scale_fill_gradient()`).
 
 ```{r}
 #| label: tbl-colors
-#| tbl-cap: "Colour and pattern parameters available in all **int3ract** plotting functions. Default colour values are highlighted in their respective colour."
+#| tbl-cap: "Colour and pattern parameters available in all **int3ract**
+#|  plotting functions. Default colour values are highlighted in their
+#|   respective colour."
 #| echo: false
 #| cache: true
 
@@ -828,7 +847,8 @@ models. By exposing the core computation in a single model-agnostic function,
 `JNK_int()`, the package invites adoption beyond the two model classes for
 which dedicated wrappers currently exist. Future development plans include:
 
-1. A wrapper for `merMod` objects from **lme4** to allow for randomly varying interactions.
+1. A wrapper for `merMod` objects from **lme4** to allow for randomly varying
+interactions.
 2. A consideration for FDR-correction.
 3. A general Bayesian application
 
@@ -837,7 +857,8 @@ full plots as supplementary material, in keeping with calls for more
 transparent and complete reporting of interaction effects [@Simonsohn2020].
 
 ## Dependencies
-To give due credit, next to the already listed packages, **int3ract** also depends on **scales**,**tidyr**, **tibble** [@scales, @tidy, @tibble].
+To give due credit, next to the already listed packages, **int3ract** also
+depends on **scales**,**tidyr**, **tibble** [@scales, @tidy, @tibble].
 
 ## References {.unnumbered}
 
