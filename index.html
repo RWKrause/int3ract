@@ -1,0 +1,1636 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.25">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Robert W. Krause">
+<meta name="keywords" content="interaction effects, Johnson-Neyman technique, moderation analysis, SAOM, Bayesian, R">
+
+<title>int3ract: Johnson–Neyman Technique and Its Three-Way Extension for Frequentist and Bayesian Models in R</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+  margin-bottom: 0em;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
+
+
+<script src="int3ract_paper_files/libs/clipboard/clipboard.min.js"></script>
+<script src="int3ract_paper_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="int3ract_paper_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="int3ract_paper_files/libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="int3ract_paper_files/libs/quarto-html/popper.min.js"></script>
+<script src="int3ract_paper_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="int3ract_paper_files/libs/quarto-html/anchor.min.js"></script>
+<link href="int3ract_paper_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="int3ract_paper_files/libs/quarto-html/quarto-syntax-highlighting-7b89279ff1a6dce999919e0e67d4d9ec.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="int3ract_paper_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="int3ract_paper_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="int3ract_paper_files/libs/bootstrap/bootstrap-9e3ffae467580fdb927a41352e75a2e0.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+</head><body class="quarto-light">\usepackage{float}
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  
+  <script>
+    (function () {
+      var script = document.createElement("script");
+      script.type = "text/javascript";
+      script.src  = "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js";
+      document.getElementsByTagName("head")[0].appendChild(script);
+    })();
+  </script>
+
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+
+
+
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+<div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+  <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#sec-intro" id="toc-sec-intro" class="nav-link active" data-scroll-target="#sec-intro"><span class="header-section-number">1</span> Introduction</a></li>
+  <li><a href="#sec-background" id="toc-sec-background" class="nav-link" data-scroll-target="#sec-background"><span class="header-section-number">2</span> Statistical Background</a>
+  <ul class="collapse">
+  <li><a href="#the-two-way-johnsonneyman-technique" id="toc-the-two-way-johnsonneyman-technique" class="nav-link" data-scroll-target="#the-two-way-johnsonneyman-technique"><span class="header-section-number">2.1</span> The Two-Way Johnson–Neyman Technique</a></li>
+  <li><a href="#sec-threeway" id="toc-sec-threeway" class="nav-link" data-scroll-target="#sec-threeway"><span class="header-section-number">2.2</span> The Three-Way Extension</a></li>
+  </ul></li>
+  <li><a href="#sec-package" id="toc-sec-package" class="nav-link" data-scroll-target="#sec-package"><span class="header-section-number">3</span> Package Architecture</a></li>
+  <li><a href="#sec-freq" id="toc-sec-freq" class="nav-link" data-scroll-target="#sec-freq"><span class="header-section-number">4</span> Frequentist Usage</a>
+  <ul class="collapse">
+  <li><a href="#two-way-interaction-with-lm" id="toc-two-way-interaction-with-lm" class="nav-link" data-scroll-target="#two-way-interaction-with-lm"><span class="header-section-number">4.1</span> Two-Way Interaction with <code>lm</code></a></li>
+  <li><a href="#three-way-interaction-with-lm" id="toc-three-way-interaction-with-lm" class="nav-link" data-scroll-target="#three-way-interaction-with-lm"><span class="header-section-number">4.2</span> Three-Way Interaction with <code>lm</code></a></li>
+  <li><a href="#stochastic-actor-oriented-models-jnk_siena" id="toc-stochastic-actor-oriented-models-jnk_siena" class="nav-link" data-scroll-target="#stochastic-actor-oriented-models-jnk_siena"><span class="header-section-number">4.3</span> Stochastic Actor-Oriented Models (<code>JNK_siena()</code>)</a></li>
+  <li><a href="#direct-use-of-jnk_int" id="toc-direct-use-of-jnk_int" class="nav-link" data-scroll-target="#direct-use-of-jnk_int"><span class="header-section-number">4.4</span> Direct Use of <code>JNK_int()</code></a></li>
+  </ul></li>
+  <li><a href="#sec-bayes" id="toc-sec-bayes" class="nav-link" data-scroll-target="#sec-bayes"><span class="header-section-number">5</span> Bayesian Usage: <code>JNSienaBayes()</code></a></li>
+  <li><a href="#sec-graphics" id="toc-sec-graphics" class="nav-link" data-scroll-target="#sec-graphics"><span class="header-section-number">6</span> Graphical Output and Customisation</a></li>
+  <li><a href="#sec-conc" id="toc-sec-conc" class="nav-link" data-scroll-target="#sec-conc"><span class="header-section-number">7</span> Summary and Outlook</a></li>
+  <li><a href="#dependencies" id="toc-dependencies" class="nav-link" data-scroll-target="#dependencies"><span class="header-section-number">8</span> Dependencies</a></li>
+  <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references">References</a></li>
+  </ul>
+<div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="int3ract_paper.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
+</div>
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title"><strong>int3ract</strong>: Johnson–Neyman Technique and Its Three-Way Extension for Frequentist and Bayesian Models in R</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Robert W. Krause <a href="mailto:robert.w.krause@mailbox.org" class="quarto-title-author-email"><i class="bi bi-envelope"></i></a> </p>
+          </div>
+  </div>
+    
+  
+    
+  </div>
+  
+<div>
+  <div class="abstract">
+    <div class="block-title">Abstract</div>
+    <p>Interaction effects are ubiquitous in applied statistical modelling, yet their meaningful interpretation remains challenging. The classic Johnson–Neyman (JN) technique <span class="citation" data-cites="Johnson1936">(<a href="#ref-Johnson1936" role="doc-biblioref">Johnson and Neyman 1936</a>)</span> addresses this challenge for two-way interactions by identifying the regions of a moderator’s range over which a focal effect is and is not statistically significant. The <strong>int3ract</strong> package for R implements the JN technique and its three-way extension (the Johnson–Neyman–Krause, or JNK, technique) for both frequentist and Bayesian models. The core function <code>JNK_int()</code> can be applied to multiplicative interactions from (virtually) any model family. Dedicated wrappers (<code>JNK_lm()</code> and <code>JNK_siena()</code>) streamline the workflow for models fitted via <code>lm()</code>/<code>glm()</code> and <strong>RSiena</strong>’s <code>siena()</code>, respectively. For Bayesian Stochastic Actor-Oriented Models (SAOMs) estimated with <strong>multiSiena</strong>, the function <code>JNSienaBayes()</code> produces conditional posterior distributions. For two-way interactions, classic shaded confidence-band plots are created that visually demarcate significant and non-significant regions along the moderator range; three-way interactions yield colour-gradient heatmaps with optional crosshatch overlays for non-significant regions. The package is designed to encourage richer, region-specific reporting of interaction effects in place of the conventional single-slope spotlight approach.</p>
+  </div>
+</div>
+
+<div>
+  <div class="keywords">
+    <div class="block-title">Keywords</div>
+    <p>interaction effects, Johnson-Neyman technique, moderation analysis, SAOM, Bayesian, R</p>
+  </div>
+</div>
+
+</header>
+
+
+<section id="sec-intro" class="level2" data-number="1">
+<h2 data-number="1" class="anchored" data-anchor-id="sec-intro"><span class="header-section-number">1</span> Introduction</h2>
+<p>Multiplicative interaction terms allow researchers to examine whether the relationship between a predictor <span class="math inline">\(X\)</span> and an outcome <span class="math inline">\(Y\)</span> depends on the value of one or more additional variables—the so-called moderators. Interpreting such interactions by inspecting the sign and significance of the interaction coefficient alone is, however, insufficient and potentially misleading <span class="citation" data-cites="Bauer2005 Preacher2006">(<a href="#ref-Bauer2005" role="doc-biblioref">Bauer and Curran 2005</a>; <a href="#ref-Preacher2006" role="doc-biblioref">Preacher, Curran, and Bauer 2006</a>)</span>. The key insight behind the Johnson–Neyman (JN) technique is that instead of evaluating the focal effect at a small number of selected moderator values (often referred to as “spotlight” or “simple-slope”), one can derive the <em>entire</em> region of the moderator’s distribution over which the focal effect is statistically distinguishable from zero <span class="citation" data-cites="Johnson1936 Potthoff1964">(<a href="#ref-Johnson1936" role="doc-biblioref">Johnson and Neyman 1936</a>; <a href="#ref-Potthoff1964" role="doc-biblioref">Potthoff 1964</a>)</span>.</p>
+<p>Originally proposed in the context of the analysis of covariance <span class="citation" data-cites="Johnson1936">(<a href="#ref-Johnson1936" role="doc-biblioref">Johnson and Neyman 1936</a>)</span>, the JN technique was later adapted for regression <span class="citation" data-cites="Potthoff1964">(<a href="#ref-Potthoff1964" role="doc-biblioref">Potthoff 1964</a>)</span> and updated by <span class="citation" data-cites="Bauer2005">Bauer and Curran (<a href="#ref-Bauer2005" role="doc-biblioref">2005</a>)</span>, whose formulation is closest to what <strong>int3ract</strong> implements. Several R packages already address the two-way JN case, for instance, <strong>interactions</strong> <span class="citation" data-cites="Long2019">(<a href="#ref-Long2019" role="doc-biblioref">Long 2019</a>)</span> and <strong>jtools</strong> <span class="citation" data-cites="Long2020">(<a href="#ref-Long2020" role="doc-biblioref">Long 2020</a>)</span>. The contribution of <strong>int3ract</strong> is threefold.</p>
+<ol type="1">
+<li><p><strong>Three-way interactions.</strong> The package provides a complete implementation of the JNK technique for three-way multiplicative interactions, producing a heatmap over the two-dimensional moderator grid rather than a single-axis ribbon plot.</p></li>
+<li><p><strong>Model-agnostic frequentist engine.</strong> The internal function <code>JNK_int()</code> requires only a coefficient vector and the relevant sub-matrix of the parameter covariance matrix. It therefore applies to any frequentist model that produces these quantities—ordinary least squares, generalised linear models, mixed-effects models, survival models, or Stochastic Actor-Oriented Models—without modification.</p></li>
+<li><p><strong>Bayesian SAOMs.</strong> The function <code>JNSienaBayes()</code> adapts the technique to the posterior distribution rather than the sampling distribution, producing density plots (two-way) and posterior-mean heatmaps with Bayesian <span class="math inline">\(p\)</span>-value overlays (three-way) for models estimated with <strong>multiSiena</strong>.</p></li>
+</ol>
+<p>The remainder of the paper is organised as follows. <a href="#sec-background" class="quarto-xref">Section&nbsp;2</a> reviews the statistical background of the JN technique and its three-way extension. <a href="#sec-package" class="quarto-xref">Section&nbsp;3</a> describes the package architecture. <a href="#sec-freq" class="quarto-xref">Section&nbsp;4</a> and <a href="#sec-bayes" class="quarto-xref">Section&nbsp;5</a> illustrate the frequentist and Bayesian workflows with worked examples. <a href="#sec-graphics" class="quarto-xref">Section&nbsp;6</a> discusses graphical customisation. <a href="#sec-conc" class="quarto-xref">Section&nbsp;7</a> concludes.</p>
+</section>
+<section id="sec-background" class="level2" data-number="2">
+<h2 data-number="2" class="anchored" data-anchor-id="sec-background"><span class="header-section-number">2</span> Statistical Background</h2>
+<section id="the-two-way-johnsonneyman-technique" class="level3" data-number="2.1">
+<h3 data-number="2.1" class="anchored" data-anchor-id="the-two-way-johnsonneyman-technique"><span class="header-section-number">2.1</span> The Two-Way Johnson–Neyman Technique</h3>
+<p>Consider the linear model</p>
+<p><span id="eq-2way"><span class="math display">\[
+Y_i = \beta_0 + \beta_1 X_i + \beta_2 M_i + \beta_3 X_i M_i + \varepsilon_i,
+\tag{1}\]</span></span></p>
+<p>where <span class="math inline">\(X\)</span> is the focal predictor, <span class="math inline">\(M\)</span> is the moderator, and <span class="math inline">\(\beta_3\)</span> is the interaction coefficient. The simple slope of <span class="math inline">\(Y\)</span> with respect to <span class="math inline">\(X\)</span> at a given value <span class="math inline">\(m\)</span> of the moderator is</p>
+<p><span id="eq-simpleslope"><span class="math display">\[
+\hat{\theta}_X(m) = \hat{\beta}_1 + \hat{\beta}_3 \, m.
+\tag{2}\]</span></span></p>
+<p>Its sampling variance follows from the delta method:</p>
+<p><span id="eq-var2way"><span class="math display">\[
+\widehat{Var}\bigl[\hat{\theta}_X(m)\bigr]
+  = \widehat{Var}(\hat{\beta}_1)
+    + 2m\,\widehat{Cov}(\hat{\beta}_1, \hat{\beta}_3)
+    + m^2\,\widehat{Var}(\hat{\beta}_3).
+\tag{3}\]</span></span></p>
+<p>The two-way JN regions are the set of moderator values <span class="math inline">\(m\)</span> for which the two-sided <span class="math inline">\(z\)</span>-test</p>
+<p><span class="math display">\[
+z(m) = \frac{\hat{\theta}_X(m)}
+            {\sqrt{\widehat{Var}[\hat{\theta}_X(m)]}}
+\]</span></p>
+<p>satisfies <span class="math inline">\(|z(m)| &gt; z_{\alpha/2}\)</span>, where <span class="math inline">\(z_{\alpha/2}\)</span> is the <span class="math inline">\((\alpha/2)\)</span>-upper quantile of the standard normal distribution.</p>
+<p>The symmetry of <a href="#eq-2way" class="quarto-xref">Equation&nbsp;1</a> implies that the roles of <span class="math inline">\(X\)</span> and <span class="math inline">\(M\)</span> are interchangeable: the simple slope of <span class="math inline">\(Y\)</span> on <span class="math inline">\(M\)</span> moderated by <span class="math inline">\(X\)</span> is <span class="math inline">\(\hat{\beta}_2 + \hat{\beta}_3 \, x\)</span>, with an analogous variance formula. <strong>int3ract</strong> therefore always produces <em>two</em> JN plots per two-way interaction and three for three-way interactions – one for each variable acting as the focal predictor.</p>
+</section>
+<section id="sec-threeway" class="level3" data-number="2.2">
+<h3 data-number="2.2" class="anchored" data-anchor-id="sec-threeway"><span class="header-section-number">2.2</span> The Three-Way Extension</h3>
+<p>When a third variable <span class="math inline">\(W\)</span> enters as an additional moderator, the full three-way interaction model is</p>
+<p><span id="eq-3way"><span class="math display">\[
+\begin{aligned}
+Y_i = \; &amp; \beta_0 + \beta_1 X_i + \beta_2 M_i + \beta_3 W_i
+           + \beta_4 X_i M_i + \beta_5 X_i W_i + \beta_6 M_i W_i \\
+         &amp; + \beta_7 X_i M_i W_i + \varepsilon_i.
+\end{aligned}
+\tag{4}\]</span></span></p>
+<p>The conditional effect of <span class="math inline">\(X\)</span> given <span class="math inline">\(M\)</span> and <span class="math inline">\(W\)</span> is</p>
+<p><span id="eq-theta3way"><span class="math display">\[
+\theta_X(m, w)
+  = \beta_1 + \beta_4 m + \beta_5 w + \beta_7 mw,
+\tag{5}\]</span></span></p>
+<p>and the corresponding standard error is obtained via the multivariate delta method:</p>
+<p><span id="eq-se3way"><span class="math display">\[
+\begin{aligned}
+\widehat{Var}\bigl[\hat{\theta}_X(m,w)\bigr]
+  = \; &amp; \widehat{Var}_{\beta_1}
+      + m^2 \widehat{Var}_{\beta_4}
+      + w^2 \widehat{Var}_{\beta_5}
+      + (m w)^2 \widehat{Var}_{\beta_7} \\
+    &amp; + 2m \widehat{Cov}(\beta_1,\beta_4)
+      + 2w \widehat{Cov}(\beta_1,\beta_5)
+      + 2m w \widehat{Cov}(\beta_1,\beta_7) \\
+    &amp; + 2m w \widehat{Cov}(\beta_4,\beta_5)
+      + 2m^2 w \widehat{Cov}(\beta_4,\beta_7) \\
+    &amp; + 2m w^2 \widehat{Cov}(\beta_5,\beta_7).
+\end{aligned}
+\tag{6}\]</span></span></p>
+<p>Because the significance region is now two-dimensional, it cannot be depicted as a simple interval on a line. <strong>int3ract</strong> instead renders a heatmap of conditional point estimates <span class="math inline">\(\hat{\theta}_X(m, w)\)</span> using a diverging colour scale, and superimposes a crosshatch pattern over cells where the null hypothesis <span class="math inline">\(\theta_X = 0\)</span> should be rejected given the chosen <span class="math inline">\(\alpha\)</span>-threshold (default: <code>threshold = 0.05</code>).</p>
+</section>
+</section>
+<section id="sec-package" class="level2" data-number="3">
+<h2 data-number="3" class="anchored" data-anchor-id="sec-package"><span class="header-section-number">3</span> Package Architecture</h2>
+<p>The package is organised into four layers, summarised in <a href="#tbl-hierarchy" class="quarto-xref">Table&nbsp;1</a>.</p>
+<div id="tbl-hierarchy" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-hierarchy-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;1: Function hierarchy of <strong>int3ract</strong>. User-facing wrappers extract the relevant coefficients and covariance sub-matrix from the model object and pass them to the appropriate engine.
+</figcaption>
+<div aria-describedby="tbl-hierarchy-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Entry point</th>
+<th>Model class</th>
+<th>Core engine</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>JNK_lm()</code></td>
+<td><code>lm</code>, <code>glm</code></td>
+<td><code>JNK_int()</code></td>
+</tr>
+<tr class="even">
+<td><code>JNK_siena()</code></td>
+<td><code>sienaFit</code> (frequentist)</td>
+<td><code>JNK_int()</code></td>
+</tr>
+<tr class="odd">
+<td><code>JNSienaBayes()</code></td>
+<td><code>multiSiena</code> (Bayesian)</td>
+<td><code>jnb_support2()</code>, <code>jnb_support3()</code></td>
+</tr>
+<tr class="even">
+<td><code>JNK_int()</code></td>
+<td><em>any</em> (generic)</td>
+<td><code>parFun()</code>, <code>seFun()</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<p><strong>Utility layer (<code>utils.R</code>).</strong><br>
+<code>parFun()</code> and <code>seFun()</code> implement <a href="#eq-theta3way" class="quarto-xref">Equation&nbsp;5</a> and <a href="#eq-se3way" class="quarto-xref">Equation&nbsp;6</a>.</p>
+<p><strong>Core frequentist engine (<code>JNK_int()</code>).</strong><br>
+The function <code>JNK_int()</code> accepts <code>name</code> (character vector of variable names), <code>coefs</code> (named numeric vector of model coefficients), <code>covar</code> (the corresponding covariance sub-matrix), and <code>vals</code> (a list of moderator value ranges). When a 2-way interaction is analysed, it returns two ribbon plots and two data frames; when a 3-way interaction, it returns three heatmaps together with the underlying matrices of point estimates, standard errors, <span class="math inline">\(p\)</span>-values, and significance indicators.</p>
+<p>Crucially, <code>JNK_int()</code> is model-agnostic. Any researcher who can extract a coefficient vector and covariance matrix from their model (whether fitted by <code>lm()</code>, <code>glmer()</code>, <code>coxph()</code>, or any other estimator) can call <code>JNK_int()</code> directly. The function can also be applied to Bayesian estimations, if one would reduce the posteriors to their mean and covariance structure.</p>
+<p><strong>Frequentist wrappers.</strong><br>
+<code>JNK_lm()</code> extracts <code>coefficients</code> and <code>vcov()</code> from an <code>lm</code> or <code>glm</code> object and constructs the interaction-term names following <span class="math inline">\(\textsf{R}\)</span>’s standard <code>:</code> convention before delegating to <code>JNK_int()</code>.</p>
+<p><code>JNK_siena()</code> extracts <code>$theta</code> and <code>$covtheta</code> from a <code>sienaFit</code> object. Because <strong>RSiena</strong> effects are harder to index by name<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a>, the user supplies the indices for all main effects and interaction terms.</p>
+<p><strong>Bayesian engine (<code>JNSienaBayes()</code>, <code>jnb_support2()</code>, <code>jnb_support3()</code>).</strong><br>
+For Bayesian SAOMs there is no single-point estimate or analytic covariance matrix. Instead, conditional posteriors will be used. <code>JNSienaBayes()</code> handles burn-in removal and thinning, detects whether each parameter was estimated as fixed (<span class="math inline">\(\eta\)</span>) or random (<span class="math inline">\(\mu\)</span>), and routes to <code>jnb_support2()</code> for 2-way interactions or <code>jnb_support3()</code> for 3-way interactions.</p>
+<p>For two-way interactions, <code>jnb_support2()</code> computes the conditional posterior draws</p>
+<p><span class="math display">\[
+\tilde{\theta}_X^{(s)}(m) = \theta^{(s)}_X + \theta^{(s)}_{XM} \cdot m
+\]</span></p>
+<p>at each sampled iteration <span class="math inline">\(s\)</span> and moderator value <span class="math inline">\(m\)</span>, yielding a full conditional posterior distribution. These are visualised as overlapping density curves coloured by moderator value, and summarised by the posterior mean, posterior standard deviation, and Bayesian <span class="math inline">\(p\)</span>-value <span class="math inline">\(\Pr(\tilde{\theta}_X &gt; 0 \mid \text{data}, \text{model}, \text{prior})\)</span>.</p>
+<p>For three-way interactions, <code>jnb_support3()</code> extends this to the grid <span class="math inline">\((m, w)\)</span>, producing heatmaps of both the posterior mean and the Bayesian <span class="math inline">\(p\)</span>-value, each overlaid with a crosshatch on cells outside the user-specified “significance” thresholds.</p>
+</section>
+<section id="sec-freq" class="level2" data-number="4">
+<h2 data-number="4" class="anchored" data-anchor-id="sec-freq"><span class="header-section-number">4</span> Frequentist Usage</h2>
+<section id="two-way-interaction-with-lm" class="level3" data-number="4.1">
+<h3 data-number="4.1" class="anchored" data-anchor-id="two-way-interaction-with-lm"><span class="header-section-number">4.1</span> Two-Way Interaction with <code>lm</code></h3>
+<p>The simplest entry point is <code>JNK_lm()</code> applied to an ordinary least-squares model.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(int3ract)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1402</span>)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>dat <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">x =</span> <span class="fu">rnorm</span>(<span class="dv">100</span>),</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>                  <span class="at">z =</span> <span class="fu">rnorm</span>(<span class="dv">100</span>),</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>                  <span class="at">w =</span> <span class="fu">rnorm</span>(<span class="dv">100</span>))</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>dat<span class="sc">$</span>y <span class="ot">=</span> dat<span class="sc">$</span>x <span class="sc">+</span> <span class="fl">0.5</span> <span class="sc">*</span> dat<span class="sc">$</span>z <span class="sc">+</span> <span class="sc">-</span>.<span class="dv">5</span> <span class="sc">*</span> dat<span class="sc">$</span>w <span class="sc">+</span> <span class="fl">0.5</span> <span class="sc">*</span> dat<span class="sc">$</span>x <span class="sc">*</span> </span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  dat<span class="sc">$</span>z <span class="sc">*</span> dat<span class="sc">$</span>w <span class="sc">+</span> <span class="fu">rnorm</span>(<span class="dv">100</span>,<span class="at">sd =</span> <span class="dv">4</span>)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>mod2 <span class="ot">&lt;-</span> <span class="fu">lm</span>(y <span class="sc">~</span> x <span class="sc">*</span> z, <span class="at">data =</span> dat)</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>jn2 <span class="ot">&lt;-</span> <span class="fu">JNK_lm</span>(mod2,</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>              <span class="at">theta_1 =</span> <span class="st">"x"</span>,</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>              <span class="at">theta_2 =</span> <span class="st">"z"</span>,</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>              <span class="at">alpha   =</span> <span class="fl">0.05</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="fig-jn2" class="quarto-layout-panel">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-jn2-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="quarto-layout-row">
+<div class="cell-output-display quarto-layout-cell-subref quarto-layout-cell" data-ref-parent="fig-jn2" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div id="fig-jn2-1" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-subfloat-fig figure">
+<div aria-describedby="fig-jn2-1-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="int3ract_paper_files/figure-html/fig-jn2-1.png" class="img-fluid figure-img" data-ref-parent="fig-jn2" width="384">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-subfloat-caption quarto-subfloat-fig" id="fig-jn2-1-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+(a) Conditional effect of <code>x</code> as a function of the moderator <code>z</code>.
+</figcaption>
+</figure>
+</div>
+</div>
+<div class="cell-output-display quarto-layout-cell-subref quarto-layout-cell" data-ref-parent="fig-jn2" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div id="fig-jn2-2" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-subfloat-fig figure">
+<div aria-describedby="fig-jn2-2-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="int3ract_paper_files/figure-html/fig-jn2-2.png" class="img-fluid figure-img" data-ref-parent="fig-jn2" width="384">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-subfloat-caption quarto-subfloat-fig" id="fig-jn2-2-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+(b) Conditional effect of <code>z</code> as a function of the moderator <code>x</code>.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-jn2-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;1: Johnson–Neyman plots for the two-way interaction between <code>x</code> and <code>z</code> (<span class="math inline">\(\alpha = 0.05\)</span>). The ribbon shows pointwise 95% confidence bands for the conditional effect; green shading indicates regions where the effect is statistically significant, chocolate where it is not.
+</figcaption>
+</figure>
+</div>
+<p>The returned list <code>jn2</code> contains <code>$param_table</code>, a list of two data frames (one per each variable involved in the interactions) with columns for the moderator values (<code>mod_vals</code>), conditional parameter, its standard error, and <span class="math inline">\(p\)</span>-value (<code>theta_vals</code>, <code>theta_se</code>, and <code>theta_p</code>), and a logical whether it is significant given the chosen <code>threshold</code>; and <code>$plots</code>, a list of two <strong>ggplot2</strong> objects.</p>
+<p>In each plot the ribbon is filled with <code>sig_color</code> (default <code>'seagreen3'</code>) where <span class="math inline">\(|z| &gt; z_{\alpha/2}\)</span> and with <code>non_sig_color</code> (default <code>'chocolate'</code>) elsewhere.</p>
+</section>
+<section id="three-way-interaction-with-lm" class="level3" data-number="4.2">
+<h3 data-number="4.2" class="anchored" data-anchor-id="three-way-interaction-with-lm"><span class="header-section-number">4.2</span> Three-Way Interaction with <code>lm</code></h3>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>mod3 <span class="ot">&lt;-</span> <span class="fu">lm</span>(y <span class="sc">~</span> x <span class="sc">*</span> z <span class="sc">*</span> w, <span class="at">data =</span> dat)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>jn3 <span class="ot">&lt;-</span> <span class="fu">JNK_lm</span>(mod3,</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>               <span class="at">theta_1    =</span> <span class="st">"x"</span>,</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>               <span class="at">theta_2    =</span> <span class="st">"z"</span>,</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>               <span class="at">theta_3    =</span> <span class="st">"w"</span>,</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>               <span class="at">range_size =</span> <span class="dv">50</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell" data-layout="[[1,1],[1]]">
+<div id="fig-jn3" class="quarto-layout-panel">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-jn3-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="quarto-layout-row">
+<div class="cell-output-display quarto-layout-cell-subref quarto-layout-cell" data-ref-parent="fig-jn3" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div id="fig-jn3-1" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-subfloat-fig figure">
+<div aria-describedby="fig-jn3-1-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="int3ract_paper_files/figure-html/fig-jn3-1.png" class="img-fluid figure-img" data-ref-parent="fig-jn3" width="384">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-subfloat-caption quarto-subfloat-fig" id="fig-jn3-1-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+(a) Conditional effect of <code>x</code> across the (<code>z</code>, <code>w</code>) moderator grid.
+</figcaption>
+</figure>
+</div>
+</div>
+<div class="cell-output-display quarto-layout-cell-subref quarto-layout-cell" data-ref-parent="fig-jn3" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div id="fig-jn3-2" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-subfloat-fig figure">
+<div aria-describedby="fig-jn3-2-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="int3ract_paper_files/figure-html/fig-jn3-2.png" class="img-fluid figure-img" data-ref-parent="fig-jn3" width="384">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-subfloat-caption quarto-subfloat-fig" id="fig-jn3-2-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+(b) Conditional effect of <code>z</code> across the (<code>x</code>, <code>w</code>) moderator grid.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<div class="quarto-layout-row">
+<div class="cell-output-display quarto-layout-cell-subref quarto-layout-cell" data-ref-parent="fig-jn3" style="flex-basis: 100.0%;justify-content: flex-start;">
+<div id="fig-jn3-3" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-subfloat-fig figure">
+<div aria-describedby="fig-jn3-3-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="int3ract_paper_files/figure-html/fig-jn3-3.png" class="img-fluid figure-img" data-ref-parent="fig-jn3" width="384">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-subfloat-caption quarto-subfloat-fig" id="fig-jn3-3-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+(c) Conditional effect of <code>w</code> across the (<code>x</code>, <code>z</code>) moderator grid.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-jn3-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;2: Johnson–Neyman–Krause heatmaps for the three-way interaction among <code>x</code>, <code>z</code>, and <code>w</code> (<code>range_size = 50</code>, <span class="math inline">\(\alpha = 0.05\)</span>). Each cell shows the conditional point estimate of the focal effect across the two-dimensional moderator grid; the diverging colour scale runs from blue (negative) through yellow (zero) to red (positive). Crosshatched cells indicate regions where the conditional effect is not statistically significant.
+</figcaption>
+</figure>
+</div>
+</div>
+<p>Setting <code>range_size = 50</code> produces a <span class="math inline">\(50 \times 50\)</span> grid for each of the three heatmaps (i.e., <span class="math inline">\(3 \times 2{,}500\)</span> conditional effect evaluations). When all three moderator ranges contain fewer than eight distinct values, the point estimate is printed in each cell; otherwise only the colour gradient communicates the magnitude. The ranges for each variable are by default extracted from the <code>lm</code>/<code>glm</code> object but can also be supplied directly, which is always necessary for <code>JNK_int()</code> and <code>JNK_siena()</code> (see the code chunk below).</p>
+</section>
+<section id="stochastic-actor-oriented-models-jnk_siena" class="level3" data-number="4.3">
+<h3 data-number="4.3" class="anchored" data-anchor-id="stochastic-actor-oriented-models-jnk_siena"><span class="header-section-number">4.3</span> Stochastic Actor-Oriented Models (<code>JNK_siena()</code>)</h3>
+<p>SAOMs estimated by <strong>RSiena</strong>’s <code>siena()</code> (formerly <code>siena07()</code>) are the primary application domain for which this package was developed, because interaction effects between network statistics and actor attributes are common yet difficult to interpret <span class="citation" data-cites="Snijders26">(<a href="#ref-Snijders26" role="doc-biblioref">T. A. B. Snijders et al. 2026</a>)</span>. The interface mirrors <code>JNK_lm()</code> but uses integer indices referencing the position of each effect in the <strong>RSiena</strong> effects object<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a>.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Two-way interaction</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>x2 <span class="ot">&lt;-</span> <span class="fu">JNK_siena</span>(res,</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>                 <span class="at">theta_1      =</span> <span class="dv">6</span>,</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>                 <span class="at">theta_2      =</span> <span class="dv">7</span>,</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>                 <span class="at">theta_int_12 =</span> <span class="dv">8</span>,</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>                 <span class="at">theta_1vals  =</span> <span class="sc">-</span><span class="dv">10</span><span class="sc">:</span><span class="dv">10</span>,</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>                 <span class="at">theta_2vals  =</span> <span class="sc">-</span><span class="dv">10</span><span class="sc">:</span><span class="dv">10</span>)</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Three-way extension</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>x3 <span class="ot">&lt;-</span> <span class="fu">JNK_siena</span>(res,</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>                 <span class="at">theta_1       =</span> <span class="dv">6</span>,</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>                 <span class="at">theta_2       =</span> <span class="dv">7</span>,</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>                 <span class="at">theta_3       =</span> <span class="dv">5</span>,</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>                 <span class="at">theta_int_12  =</span> <span class="dv">8</span>,</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>                 <span class="at">theta_int_13  =</span> <span class="dv">10</span>,</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>                 <span class="at">theta_int_23  =</span> <span class="dv">9</span>,</span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>                 <span class="at">theta_int_123 =</span> <span class="dv">11</span>,</span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>                 <span class="at">theta_1vals   =</span> <span class="sc">-</span><span class="dv">10</span><span class="sc">:</span><span class="dv">10</span>,</span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>                 <span class="at">theta_2vals   =</span> <span class="sc">-</span><span class="dv">10</span><span class="sc">:</span><span class="dv">10</span>,</span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>                 <span class="at">theta_3vals   =</span> <span class="dv">0</span><span class="sc">:</span><span class="dv">6</span>,</span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>                 <span class="at">range_size    =</span> <span class="dv">10</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>The moderator value ranges (<code>theta_1vals</code>, <code>theta_2vals</code>, <code>theta_3vals</code>) should reflect the empirical support of the corresponding change statistics. By default <code>range_size = 500</code> equidistant points are drawn from these ranges. The returned tables and plots are named as derived from the model using the `name’ column in the <strong>RSiena</strong> effects object.</p>
+</section>
+<section id="direct-use-of-jnk_int" class="level3" data-number="4.4">
+<h3 data-number="4.4" class="anchored" data-anchor-id="direct-use-of-jnk_int"><span class="header-section-number">4.4</span> Direct Use of <code>JNK_int()</code></h3>
+<p>Because <code>JNK_int()</code> requires only a coefficient vector and a covariance matrix, it is straightforward to apply it to models not covered by the existing wrappers. For instance, for a mixed-effects model fitted with <strong>lme4</strong>:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(lme4)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(int3ract)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>lme_mod <span class="ot">&lt;-</span> <span class="fu">lmer</span>(y <span class="sc">~</span> x <span class="sc">*</span> z <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> group), <span class="at">data =</span> dat)</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>all_coef <span class="ot">&lt;-</span> <span class="fu">fixef</span>(lme_mod)</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>all_vcov <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">vcov</span>(lme_mod))</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>sel      <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"x"</span>, <span class="st">"z"</span>, <span class="st">"x:z"</span>)</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="fu">JNK_int</span>(<span class="at">name  =</span> <span class="fu">c</span>(<span class="st">"x"</span>, <span class="st">"z"</span>),</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>         <span class="at">coefs =</span> all_coef[sel],</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>         <span class="at">covar =</span> all_vcov[sel, sel],</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>         <span class="at">vals  =</span> <span class="fu">list</span>(<span class="fu">range</span>(dat<span class="sc">$</span>x), <span class="fu">range</span>(dat<span class="sc">$</span>z)),</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>         <span class="at">range_size =</span> <span class="dv">1000</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>The same pattern applies to survival models (<strong>survival</strong>), ordinal regression (<strong>MASS</strong>), beta regression (<strong>betareg</strong>), and any other estimation that that provides parameter estimates and their covariances.</p>
+</section>
+</section>
+<section id="sec-bayes" class="level2" data-number="5">
+<h2 data-number="5" class="anchored" data-anchor-id="sec-bayes"><span class="header-section-number">5</span> Bayesian Usage: <code>JNSienaBayes()</code></h2>
+<p>For multi-group Bayesian SAOMs estimated with <strong>multiSiena</strong> <span class="citation" data-cites="SienaMult Kosk23">(<a href="#ref-SienaMult" role="doc-biblioref">T. Snijders, Koskinen, and Ripley 2026</a>; <a href="#ref-Kosk23" role="doc-biblioref">Koskinen and Snijders 2023</a>)</span>, a series of conditional posterior distributions over the range of the moderator replaces the classic JN-framework. If the moderator range is given explicitly with fewer than eight unique values, distinct colors are used to plot each The function <code>JNSienaBayes()</code> automatically detects whether each required parameter has been estimated as a fixed effect (<span class="math inline">\(\eta\)</span>; shared across groups) or as a random effect (<span class="math inline">\(\mu\)</span>; group-varying, with a hyper-parameter), and extracts the appropriate posterior draws.</p>
+<p>The returned object is a named list similar to those returned for frequentist interactions. Each table here contains the posterior mean, posterior SD, Bayesian <span class="math inline">\(p\)</span>-value (<span class="math inline">\(\Pr(\tilde{\theta}_X &gt; 0 \mid \text{data}, \text{model}, \text{prior})\)</span>), and 2.5th and 97.5th percentiles of the conditional posterior for each moderator value.</p>
+<p>When <code>hyper_only = FALSE</code> and at least one of the involved parameters is randomly varying between groups, <code>JNSienaBayes()</code> additionally loops over all <span class="math inline">\(G\)</span> groups and produces group-specific plots and tables, returned under the key <code>random_groups_effects</code>. This is useful for assessing heterogeneity of interaction effects across networks. Two additional arguments are helpful when many plots are made: <code>save = TRUE</code> will save each plot with <code>ggsave()</code>. To avoid cluttering your working directory, <code>folder</code> provides the location of a folder where the plots will be stored. If no input is provided, a new folder <code>int3ract JNplots</code> will be created (note that RStudio will ask you in the console whether such a folder is allowed to be created, if it does not exist yet).</p>
+<p>For three-way interactions, the call is extended as usual. The <code>thresholds</code> argument (a vector of length 2, e.g., <code>c(0.05, 0.95)</code>) determines which cells of the posterior-mean heatmap are crosshatched: cells whose Bayesian <span class="math inline">\(p\)</span>-value falls inside the interval <span class="math inline">\([\mathrm{threshold}_1, \mathrm{threshold}_2]\)</span> are treated as non-significant.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>jnb2 <span class="ot">&lt;-</span> <span class="fu">JNSienaBayes</span>(<span class="at">sbo          =</span> my_multiSiena_result,</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>                     <span class="at">theta_1      =</span> <span class="dv">4</span>,</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>                     <span class="at">theta_2      =</span> <span class="dv">7</span>,</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>                     <span class="at">theta_int_12 =</span> <span class="dv">9</span>,</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>                     <span class="at">theta_1_vals =</span> <span class="fu">c</span>(<span class="sc">-</span><span class="dv">1</span>,<span class="dv">0</span>,<span class="dv">1</span>),</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>                     <span class="at">theta_2_vals =</span> <span class="fu">seq</span>(<span class="sc">-</span><span class="dv">3</span>,<span class="dv">3</span>,<span class="fl">0.5</span>),</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>                     <span class="at">burnIn       =</span> <span class="dv">500</span>,</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>                     <span class="at">thin         =</span> <span class="dv">2</span>,</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>                     <span class="at">save         =</span> <span class="cn">FALSE</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell" data-layout="[1]">
+<div id="fig-bayes-2fake" class="quarto-layout-panel">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-bayes-2fake-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="quarto-layout-row">
+<div class="cell-output-display quarto-layout-cell-subref quarto-layout-cell" data-ref-parent="fig-bayes-2fake" style="flex-basis: 100.0%;justify-content: flex-start;">
+<div id="fig-bayes-2fake-1" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-subfloat-fig figure">
+<div aria-describedby="fig-bayes-2fake-1-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="int3ract_paper_files/figure-html/fig-bayes-2fake-1.png" class="img-fluid figure-img" data-ref-parent="fig-bayes-2fake" width="432">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-subfloat-caption quarto-subfloat-fig" id="fig-bayes-2fake-1-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+(a) Posterior densities for altX conditional on simultaneous changes in reciprocity. In this example, altX is always positive but has larger variance when reciprocity would decrease (i.e., a reciprocal tie to someone with negative values on the covariate would be broken, leading to -1 in recirpocity but overall an increase in altX).
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<div class="quarto-layout-row">
+<div class="cell-output-display quarto-layout-cell-subref quarto-layout-cell" data-ref-parent="fig-bayes-2fake" style="flex-basis: 100.0%;justify-content: flex-start;">
+<div id="fig-bayes-2fake-2" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-subfloat-fig figure">
+<div aria-describedby="fig-bayes-2fake-2-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="int3ract_paper_files/figure-html/fig-bayes-2fake-2.png" class="img-fluid figure-img" data-ref-parent="fig-bayes-2fake" width="432">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-subfloat-caption quarto-subfloat-fig" id="fig-bayes-2fake-2-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+(b) Posterior densities for reciprocity conditional on simultaneous changes in altX. Here, while generally positive, reciprocity only has a consistently positive effect on tie formation when altX changes moderately, around -1 to 1 (yellow curves). While reciprocity gets more positive with increasing values in the change of altX, the posterior variance increases as well.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-bayes-2fake-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;3: Conditional posterior densities for the parameters for reciprocity and altX on a attribute.
+</figcaption>
+</figure>
+</div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>jnb3 <span class="ot">&lt;-</span> <span class="fu">JNSienaBayes</span>(<span class="at">sbo           =</span> my_multiSiena_result,</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>                     <span class="at">theta_1       =</span> <span class="dv">4</span>,</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>                     <span class="at">theta_2       =</span> <span class="dv">10</span>,</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>                     <span class="at">theta_3       =</span> <span class="dv">9</span>,</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>                     <span class="at">theta_int_12  =</span> <span class="dv">21</span>,</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>                     <span class="at">theta_int_13  =</span> <span class="dv">22</span>,</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>                     <span class="at">theta_int_23  =</span> <span class="dv">11</span>,</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>                     <span class="at">theta_int_123 =</span> <span class="dv">23</span>,</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>                     <span class="at">theta_1_vals  =</span> <span class="fu">seq</span>(<span class="sc">-</span><span class="dv">2</span>, <span class="dv">2</span>, <span class="at">length.out =</span> <span class="dv">50</span>),</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>                     <span class="at">theta_2_vals  =</span> <span class="fu">seq</span>(<span class="sc">-</span><span class="dv">2</span>, <span class="dv">2</span>, <span class="at">length.out =</span> <span class="dv">50</span>),</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>                     <span class="at">theta_3_vals  =</span> <span class="fu">seq</span>(<span class="sc">-</span><span class="dv">2</span>, <span class="dv">2</span>, <span class="at">length.out =</span> <span class="dv">50</span>),</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>                     <span class="at">thresholds    =</span> <span class="fu">c</span>(<span class="fl">0.05</span>, <span class="fl">0.95</span>),</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>                     <span class="at">burnIn        =</span> <span class="dv">500</span>,</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>                     <span class="at">thin          =</span> <span class="dv">2</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell" data-layout="[1]">
+<div id="fig-bayes-3fake" class="quarto-layout-panel">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-bayes-3fake-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="quarto-layout-row">
+<div class="cell-output-display quarto-layout-cell-subref quarto-layout-cell" data-ref-parent="fig-bayes-3fake" style="flex-basis: 100.0%;justify-content: flex-start;">
+<div id="fig-bayes-3fake" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-subfloat-fig figure">
+<div aria-describedby="fig-bayes-3fake-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="int3ract_paper_files/figure-html/fig-bayes-3fake-1.png" class="img-fluid figure-img" data-ref-parent="fig-bayes-3fake" width="432">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-subfloat-caption quarto-subfloat-fig" id="fig-bayes-3fake-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+(a) Mean posterior densities for the effect of ego’s self-monitoring on tie creation conditional on ego’s and alter’s creativity. In this example, self-monitoring has a positive effect on tie creation when both ego and alter have similar levels of creativity.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-bayes-3fake-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;4: Figures for Bayesian 3-way interactions
+</figcaption>
+</figure>
+</div>
+</div>
+</section>
+<section id="sec-graphics" class="level2" data-number="6">
+<h2 data-number="6" class="anchored" data-anchor-id="sec-graphics"><span class="header-section-number">6</span> Graphical Output and Customisation</h2>
+<p>All plots are standard <strong>ggplot2</strong> objects <span class="citation" data-cites="Wickham2016">(<a href="#ref-Wickham2016" role="doc-biblioref">Wickham 2016</a>)</span> and can be further modified using <strong>ggplot2</strong>’s layer system. The crosshatch pattern for non-significant regions is produced by <strong>ggpattern</strong> <span class="citation" data-cites="ggpattern2022">(<a href="#ref-ggpattern2022" role="doc-biblioref">Stewart 2022</a>)</span>. <a href="#tbl-colors" class="quarto-xref">Table&nbsp;2</a> documents the colour and pattern parameters shared across all plotting functions. The colours for high, mid, and low point for continuous plots are taken from the <code>Zissou1</code> palette from the <strong>wesanderson</strong> package <span class="citation" data-cites="wesanderson">(<a href="#ref-wesanderson" role="doc-biblioref">Ram and Wickham 2023</a>)</span>. Direct use of palettes is not supported but users can always overlay their own color palettes post-hoc by calling <code>scale_fill_gradient2()</code>/<code>scale_color_gradient2()</code> (for more and alternatives see <code>?ggplot2::scale_fill_gradient()</code>).</p>
+<div class="cell">
+<div id="tbl-colors" class="cell quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-colors-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;2: Colour and pattern parameters available in all <strong>int3ract</strong> plotting functions. Default colour values are highlighted in their respective colour.
+</figcaption>
+<div aria-describedby="tbl-colors-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output-display">
+<div id="nqktlvjnrp" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<style>@import url("https://fonts.googleapis.com/css2?family=Source+Code+Pro:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Source+Code+Pro:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap");
+#nqktlvjnrp table {
+  font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#nqktlvjnrp thead, #nqktlvjnrp tbody, #nqktlvjnrp tfoot, #nqktlvjnrp tr, #nqktlvjnrp td, #nqktlvjnrp th {
+  border-style: none;
+}
+
+#nqktlvjnrp p {
+  margin: 0;
+  padding: 0;
+}
+
+#nqktlvjnrp .gt_table {
+  display: table;
+  border-collapse: collapse;
+  line-height: normal;
+  margin-left: auto;
+  margin-right: auto;
+  color: #333333;
+  font-size: 16px;
+  font-weight: normal;
+  font-style: normal;
+  background-color: #FFFFFF;
+  width: auto;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #A8A8A8;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #A8A8A8;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+}
+
+#nqktlvjnrp .gt_caption {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+#nqktlvjnrp .gt_title {
+  color: #333333;
+  font-size: 125%;
+  font-weight: initial;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-bottom-color: #FFFFFF;
+  border-bottom-width: 0;
+}
+
+#nqktlvjnrp .gt_subtitle {
+  color: #333333;
+  font-size: 85%;
+  font-weight: initial;
+  padding-top: 3px;
+  padding-bottom: 5px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-top-color: #FFFFFF;
+  border-top-width: 0;
+}
+
+#nqktlvjnrp .gt_heading {
+  background-color: #FFFFFF;
+  text-align: center;
+  border-bottom-color: #FFFFFF;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+}
+
+#nqktlvjnrp .gt_bottom_border {
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+}
+
+#nqktlvjnrp .gt_col_headings {
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+}
+
+#nqktlvjnrp .gt_col_heading {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: normal;
+  text-transform: inherit;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: bottom;
+  padding-top: 5px;
+  padding-bottom: 6px;
+  padding-left: 5px;
+  padding-right: 5px;
+  overflow-x: hidden;
+}
+
+#nqktlvjnrp .gt_column_spanner_outer {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: normal;
+  text-transform: inherit;
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+#nqktlvjnrp .gt_column_spanner_outer:first-child {
+  padding-left: 0;
+}
+
+#nqktlvjnrp .gt_column_spanner_outer:last-child {
+  padding-right: 0;
+}
+
+#nqktlvjnrp .gt_column_spanner {
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  vertical-align: bottom;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  overflow-x: hidden;
+  display: inline-block;
+  width: 100%;
+}
+
+#nqktlvjnrp .gt_spanner_row {
+  border-bottom-style: hidden;
+}
+
+#nqktlvjnrp .gt_group_heading {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  text-transform: inherit;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: middle;
+  text-align: left;
+}
+
+#nqktlvjnrp .gt_empty_group_heading {
+  padding: 0.5px;
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  vertical-align: middle;
+}
+
+#nqktlvjnrp .gt_from_md > :first-child {
+  margin-top: 0;
+}
+
+#nqktlvjnrp .gt_from_md > :last-child {
+  margin-bottom: 0;
+}
+
+#nqktlvjnrp .gt_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  margin: 10px;
+  border-top-style: solid;
+  border-top-width: 1px;
+  border-top-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: middle;
+  overflow-x: hidden;
+}
+
+#nqktlvjnrp .gt_stub {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  text-transform: inherit;
+  border-right-style: solid;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#nqktlvjnrp .gt_stub_row_group {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  text-transform: inherit;
+  border-right-style: solid;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+  padding-left: 5px;
+  padding-right: 5px;
+  vertical-align: top;
+}
+
+#nqktlvjnrp .gt_row_group_first td {
+  border-top-width: 2px;
+}
+
+#nqktlvjnrp .gt_row_group_first th {
+  border-top-width: 2px;
+}
+
+#nqktlvjnrp .gt_summary_row {
+  color: #333333;
+  background-color: #FFFFFF;
+  text-transform: inherit;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#nqktlvjnrp .gt_first_summary_row {
+  border-top-style: solid;
+  border-top-color: #D3D3D3;
+}
+
+#nqktlvjnrp .gt_first_summary_row.thick {
+  border-top-width: 2px;
+}
+
+#nqktlvjnrp .gt_last_summary_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+}
+
+#nqktlvjnrp .gt_grand_summary_row {
+  color: #333333;
+  background-color: #FFFFFF;
+  text-transform: inherit;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#nqktlvjnrp .gt_first_grand_summary_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-top-style: double;
+  border-top-width: 6px;
+  border-top-color: #D3D3D3;
+}
+
+#nqktlvjnrp .gt_last_grand_summary_row_top {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-bottom-style: double;
+  border-bottom-width: 6px;
+  border-bottom-color: #D3D3D3;
+}
+
+#nqktlvjnrp .gt_striped {
+  background-color: rgba(128, 128, 128, 0.05);
+}
+
+#nqktlvjnrp .gt_table_body {
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+}
+
+#nqktlvjnrp .gt_footnotes {
+  color: #333333;
+  background-color: #FFFFFF;
+  border-bottom-style: none;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+}
+
+#nqktlvjnrp .gt_footnote {
+  margin: 0px;
+  font-size: 90%;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#nqktlvjnrp .gt_sourcenotes {
+  color: #333333;
+  background-color: #FFFFFF;
+  border-bottom-style: none;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+}
+
+#nqktlvjnrp .gt_sourcenote {
+  font-size: 90%;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#nqktlvjnrp .gt_left {
+  text-align: left;
+}
+
+#nqktlvjnrp .gt_center {
+  text-align: center;
+}
+
+#nqktlvjnrp .gt_right {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+#nqktlvjnrp .gt_font_normal {
+  font-weight: normal;
+}
+
+#nqktlvjnrp .gt_font_bold {
+  font-weight: bold;
+}
+
+#nqktlvjnrp .gt_font_italic {
+  font-style: italic;
+}
+
+#nqktlvjnrp .gt_super {
+  font-size: 65%;
+}
+
+#nqktlvjnrp .gt_footnote_marks {
+  font-size: 75%;
+  vertical-align: 0.4em;
+  position: initial;
+}
+
+#nqktlvjnrp .gt_asterisk {
+  font-size: 100%;
+  vertical-align: 0;
+}
+
+#nqktlvjnrp .gt_indent_1 {
+  text-indent: 5px;
+}
+
+#nqktlvjnrp .gt_indent_2 {
+  text-indent: 10px;
+}
+
+#nqktlvjnrp .gt_indent_3 {
+  text-indent: 15px;
+}
+
+#nqktlvjnrp .gt_indent_4 {
+  text-indent: 20px;
+}
+
+#nqktlvjnrp .gt_indent_5 {
+  text-indent: 25px;
+}
+
+#nqktlvjnrp .katex-display {
+  display: inline-flex !important;
+  margin-bottom: 0.75em !important;
+}
+
+#nqktlvjnrp div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
+  height: 0px !important;
+}
+</style>
+
+<table class="gt_table do-not-create-environment cell caption-top table table-sm table-striped small" data-quarto-bootstrap="false">
+<thead>
+<tr class="gt_col_headings header">
+<th id="Parameter" class="gt_col_heading gt_columns_bottom_border gt_left" data-quarto-table-cell-role="th" style="font-family: 'Source Code Pro'; font-size: small" scope="col">Parameter</th>
+<th id="Description" class="gt_col_heading gt_columns_bottom_border gt_left" data-quarto-table-cell-role="th" scope="col">Description</th>
+<th id="Default" class="gt_col_heading gt_columns_bottom_border gt_left" data-quarto-table-cell-role="th" style="font-family: 'Source Code Pro'; font-size: small" scope="col">Default</th>
+</tr>
+</thead>
+<tbody class="gt_table_body">
+<tr class="odd">
+<td class="gt_row gt_left" headers="Parameter" style="font-family: 'Source Code Pro'; font-size: small">sig_color</td>
+<td class="gt_row gt_left" headers="Description">Ribbon fill for significant regions (2-way)</td>
+<td class="gt_row gt_left" headers="Default" style="font-family: 'Source Code Pro'; font-size: small; color: #000000; background-color: #43CD80">`seagreen3'</td>
+</tr>
+<tr class="even">
+<td class="gt_row gt_left gt_striped" headers="Parameter" style="font-family: 'Source Code Pro'; font-size: small">non_sig_color</td>
+<td class="gt_row gt_left gt_striped" headers="Description">Ribbon fill for non-significant regions (2-way)</td>
+<td class="gt_row gt_left gt_striped" headers="Default" style="font-family: 'Source Code Pro'; font-size: small; color: #FFFFFF; background-color: #D2691E">`chocolate'</td>
+</tr>
+<tr class="odd">
+<td class="gt_row gt_left" headers="Parameter" style="font-family: 'Source Code Pro'; font-size: small">line_color</td>
+<td class="gt_row gt_left" headers="Description">Point-estimate line colour (2-way)</td>
+<td class="gt_row gt_left" headers="Default" style="font-family: 'Source Code Pro'; font-size: small; color: #FFFFFF; background-color: #000000">`black'</td>
+</tr>
+<tr class="even">
+<td class="gt_row gt_left gt_striped" headers="Parameter" style="font-family: 'Source Code Pro'; font-size: small">color_low</td>
+<td class="gt_row gt_left gt_striped" headers="Description">Low end of diverging fill scale (heatmaps)</td>
+<td class="gt_row gt_left gt_striped" headers="Default" style="font-family: 'Source Code Pro'; font-size: small; color: #000000; background-color: #3B9AB2">`#F05039'</td>
+</tr>
+<tr class="odd">
+<td class="gt_row gt_left" headers="Parameter" style="font-family: 'Source Code Pro'; font-size: small">color_mid</td>
+<td class="gt_row gt_left" headers="Description">Midpoint colour of diverging fill scale</td>
+<td class="gt_row gt_left" headers="Default" style="font-family: 'Source Code Pro'; font-size: small; color: #000000; background-color: #EBCC2A; border-left-width: 1px; border-left-style: solid; border-left-color: #CCCCCC; border-right-width: 1px; border-right-style: solid; border-right-color: #CCCCCC; border-top-width: 1px; border-top-style: solid; border-top-color: #CCCCCC; border-bottom-width: 1px; border-bottom-style: solid; border-bottom-color: #CCCCCC">`white'</td>
+</tr>
+<tr class="even">
+<td class="gt_row gt_left gt_striped" headers="Parameter" style="font-family: 'Source Code Pro'; font-size: small">color_high</td>
+<td class="gt_row gt_left gt_striped" headers="Description">High end of diverging fill scale</td>
+<td class="gt_row gt_left gt_striped" headers="Default" style="font-family: 'Source Code Pro'; font-size: small; color: #FFFFFF; background-color: #F21A00">`#000066'</td>
+</tr>
+<tr class="odd">
+<td class="gt_row gt_left" headers="Parameter" style="font-family: 'Source Code Pro'; font-size: small">color_grid</td>
+<td class="gt_row gt_left" headers="Description">Crosshatch line colour</td>
+<td class="gt_row gt_left" headers="Default" style="font-family: 'Source Code Pro'; font-size: small; color: #FFFFFF; background-color: #000000">`black'</td>
+</tr>
+<tr class="even">
+<td class="gt_row gt_left gt_striped" headers="Parameter" style="font-family: 'Source Code Pro'; font-size: small">grid_density</td>
+<td class="gt_row gt_left gt_striped" headers="Description">Density of crosshatch lines</td>
+<td class="gt_row gt_left gt_striped" headers="Default" style="font-family: 'Source Code Pro'; font-size: small">0.01</td>
+</tr>
+<tr class="odd">
+<td class="gt_row gt_left" headers="Parameter" style="font-family: 'Source Code Pro'; font-size: small">grid_spacing</td>
+<td class="gt_row gt_left" headers="Description">Spacing between crosshatch lines</td>
+<td class="gt_row gt_left" headers="Default" style="font-family: 'Source Code Pro'; font-size: small">0.1</td>
+</tr>
+<tr class="even">
+<td class="gt_row gt_left gt_striped" headers="Parameter" style="font-family: 'Source Code Pro'; font-size: small">color_values</td>
+<td class="gt_row gt_left gt_striped" headers="Description">Within-cell text colour (heatmaps, ≤ 7 values)</td>
+<td class="gt_row gt_left gt_striped" headers="Default" style="font-family: 'Source Code Pro'; font-size: small; color: #FFFFFF; background-color: #666666">`grey40'</td>
+</tr>
+<tr class="odd">
+<td class="gt_row gt_left" headers="Parameter" style="font-family: 'Source Code Pro'; font-size: small">crosshatch_non_sig</td>
+<td class="gt_row gt_left" headers="Description">If TRUE, crosshatch marks the non-significant region</td>
+<td class="gt_row gt_left" headers="Default" style="font-family: 'Source Code Pro'; font-size: small">TRUE</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+</div>
+</div>
+</figure>
+</div>
+</div>
+</section>
+<section id="sec-conc" class="level2" data-number="7">
+<h2 data-number="7" class="anchored" data-anchor-id="sec-conc"><span class="header-section-number">7</span> Summary and Outlook</h2>
+<p><strong>int3ract</strong> provides a unified interface for the Johnson–Neyman technique and its three-way extension across a broad class of frequentist and Bayesian models. By exposing the core computation in a single model-agnostic function, <code>JNK_int()</code>, the package invites adoption beyond the two model classes for which dedicated wrappers currently exist. Future development plans include:</p>
+<ol type="1">
+<li>A wrapper for <code>merMod</code> objects from <strong>lme4</strong> to allow for randomly varying interactions.</li>
+<li>A consideration for FDR-correction.</li>
+<li>A general Bayesian application</li>
+</ol>
+<p>Researchers are encouraged to report not only the JN boundaries but also the full plots as supplementary material, in keeping with calls for more transparent and complete reporting of interaction effects <span class="citation" data-cites="Simonsohn2020">(<a href="#ref-Simonsohn2020" role="doc-biblioref">Simonsohn, Simmons, and Nelson 2020</a>)</span>.</p>
+</section>
+<section id="dependencies" class="level2" data-number="8">
+<h2 data-number="8" class="anchored" data-anchor-id="dependencies"><span class="header-section-number">8</span> Dependencies</h2>
+<p>To give due credit, next to the already listed packages, <strong>int3ract</strong> also depends on <strong>scales</strong>, <strong>tidyr</strong>, and <strong>tibble</strong> <span class="citation" data-cites="scales tidy tibble">(<a href="#ref-scales" role="doc-biblioref">Wickham, Pedersen, and Seidel 2025</a>; <a href="#ref-tidy" role="doc-biblioref">Wickham, Vaughan, and Girlich 2025</a>; <a href="#ref-tibble" role="doc-biblioref">Müller and Wickham 2026</a>)</span>.</p>
+</section>
+<section id="references" class="level2 unnumbered">
+<h2 class="unnumbered anchored" data-anchor-id="references">References</h2>
+<div id="refs" class="references csl-bib-body hanging-indent" data-entry-spacing="0" role="list">
+<div id="ref-Bauer2005" class="csl-entry" role="listitem">
+Bauer, Daniel J., and Patrick J. Curran. 2005. <span>“Probing Interactions in Fixed and Multilevel Regression: Inferential and Graphical Techniques.”</span> <em>Multivariate Behavioral Research</em> 40 (3): 373–400. <a href="https://doi.org/10.1207/s15327906mbr4003_5">https://doi.org/10.1207/s15327906mbr4003_5</a>.
+</div>
+<div id="ref-Johnson1936" class="csl-entry" role="listitem">
+Johnson, Palmer O., and Jerzy Neyman. 1936. <span>“Tests of Certain Linear Hypotheses and Their Applications to Some Educational Problems.”</span> <em>Statistical Research Memoirs</em> 1: 57–93.
+</div>
+<div id="ref-Kosk23" class="csl-entry" role="listitem">
+Koskinen, Johan H., and Tom A. B. Snijders. 2023. <span>“Multilevel Longitudinal Analysis of Social Networks.”</span> <em>Journal of the Royal Statistical Society, Series A</em> 186: 376–400.
+</div>
+<div id="ref-Long2019" class="csl-entry" role="listitem">
+Long, Jacob Scott. 2019. <em><span class="nocase">interactions</span>: Comprehensive, User-Friendly Toolkit for Probing Interactions</em>. <a href="https://cran.r-project.org/package=interactions">https://cran.r-project.org/package=interactions</a>.
+</div>
+<div id="ref-Long2020" class="csl-entry" role="listitem">
+———. 2020. <em><span class="nocase">jtools</span>: Analysis and Presentation of Social Scientific Data</em>. <a href="https://cran.r-project.org/package=jtools">https://cran.r-project.org/package=jtools</a>.
+</div>
+<div id="ref-tibble" class="csl-entry" role="listitem">
+Müller, Kirill, and Hadley Wickham. 2026. <em>Tibble: Simple Data Frames</em>. <a href="https://doi.org/10.32614/CRAN.package.tibble">https://doi.org/10.32614/CRAN.package.tibble</a>.
+</div>
+<div id="ref-Potthoff1964" class="csl-entry" role="listitem">
+Potthoff, Richard F. 1964. <span>“On the <span>Johnson–Neyman</span> Technique and Some Extensions Thereof.”</span> <em>Psychometrika</em> 29 (3): 241–56. <a href="https://doi.org/10.1007/BF02289721">https://doi.org/10.1007/BF02289721</a>.
+</div>
+<div id="ref-Preacher2006" class="csl-entry" role="listitem">
+Preacher, Kristopher J., Patrick J. Curran, and Daniel J. Bauer. 2006. <span>“Computational Tools for Probing Interactions in Multiple Linear Regression, Multilevel Modeling, and Latent Curve Analysis.”</span> <em>Journal of Educational and Behavioral Statistics</em> 31 (4): 437–48. <a href="https://doi.org/10.3102/10769986031004437">https://doi.org/10.3102/10769986031004437</a>.
+</div>
+<div id="ref-wesanderson" class="csl-entry" role="listitem">
+Ram, Karthik, and Hadley Wickham. 2023. <em>Wesanderson: A Wes Anderson Palette Generator</em>. <a href="https://doi.org/10.32614/CRAN.package.wesanderson">https://doi.org/10.32614/CRAN.package.wesanderson</a>.
+</div>
+<div id="ref-Simonsohn2020" class="csl-entry" role="listitem">
+Simonsohn, Uri, Joseph P. Simmons, and Leif D. Nelson. 2020. <span>“Specification Curve Analysis.”</span> <em>Nature Human Behaviour</em> 4 (11): 1208–14. <a href="https://doi.org/10.1038/s41562-020-0912-z">https://doi.org/10.1038/s41562-020-0912-z</a>.
+</div>
+<div id="ref-Snijders26" class="csl-entry" role="listitem">
+Snijders, Tom A. B., Ruth M. Ripley, Krists Boitmanis, Christian Steglich, Nynke M. D. Niezink, Viviana Amati, and Felix Schoenenberger. 2026. <em>Siena - Simulation Investigation for Empirical Network Analysis</em>. Groningen, The Netherlands: University of Groningen. <a href="https://www.stats.ox.ac.uk/~snijders/siena/">https://www.stats.ox.ac.uk/~snijders/siena/</a>.
+</div>
+<div id="ref-SienaMult" class="csl-entry" role="listitem">
+Snijders, Tom, Johan Koskinen, and Ruth Ripley. 2026. <em>multiSiena - Simulation Investigation for Multilevel Empirical Network Analysis</em>. Groningen, The Netherlands: University of Groningen. <a href="http://www.stats.ox.ac.uk/~snijders/siena">http://www.stats.ox.ac.uk/~snijders/siena</a>.
+</div>
+<div id="ref-ggpattern2022" class="csl-entry" role="listitem">
+Stewart, Mike. 2022. <em><span class="nocase">ggpattern</span>: <span class="nocase">ggplot2</span> Pattern Geoms</em>. <a href="https://cran.r-project.org/package=ggpattern">https://cran.r-project.org/package=ggpattern</a>.
+</div>
+<div id="ref-Wickham2016" class="csl-entry" role="listitem">
+Wickham, Hadley. 2016. <em><span class="nocase">ggplot2</span>: Elegant Graphics for Data Analysis</em>. New York: Springer-Verlag. <a href="https://doi.org/10.1007/978-3-319-24277-4">https://doi.org/10.1007/978-3-319-24277-4</a>.
+</div>
+<div id="ref-scales" class="csl-entry" role="listitem">
+Wickham, Hadley, Thomas Lin Pedersen, and Dana Seidel. 2025. <em>Scales: Scale Functions for Visualization</em>. <a href="https://doi.org/10.32614/CRAN.package.scales">https://doi.org/10.32614/CRAN.package.scales</a>.
+</div>
+<div id="ref-tidy" class="csl-entry" role="listitem">
+Wickham, Hadley, Davis Vaughan, and Maximilian Girlich. 2025. <em>Tidyr: Tidy Messy Data</em>. <a href="https://doi.org/10.32614/CRAN.package.tidyr">https://doi.org/10.32614/CRAN.package.tidyr</a>.
+</div>
+</div>
+</section>
+
+
+<div id="quarto-appendix" class="default"><section id="footnotes" class="footnotes footnotes-end-of-document" role="doc-endnotes"><h2 class="anchored quarto-appendix-heading">Footnotes</h2>
+
+<ol>
+<li id="fn1"><p>While effects are identifyable by name, in complex models the same effect can appear multiple times for different dependent variables and/or as different effect types, making it harder on the user to provide accurate input to the <code>JNK_siena()</code> compared to using the already provided numbering system in <code>siena()</code> outputs.<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn2"><p>While each effect in <strong>RSiena</strong> is named, within a given model, effects are not necessarily identifiable by their name but the same name might appear multiple times for different dependent variables or effect types<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+</ol>
+</section></div></main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
