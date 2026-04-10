@@ -29,7 +29,7 @@
 #' @import tibble
 #' 
 #' @export
-freq_int <- function(name,
+JNK_int <- function(name,
                      covar,
                      coefs,
                      vals,
@@ -40,9 +40,9 @@ freq_int <- function(name,
                      sig_color = 'seagreen3',
                      non_sig_color = 'chocolate',
                      line_color = 'black',
-                     color_mid = 'white',
-                     color_low = '#F05039',
-                     color_high = '#000066',
+                     color_mid = '#EBCC2A', 
+                     color_low = '#3B9AB2',
+                     color_high = '#F21A00',
                      color_values = 'grey40',
                      color_grid = 'black',
                      grid_density = 0.01,

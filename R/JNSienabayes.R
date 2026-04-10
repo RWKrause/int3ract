@@ -49,9 +49,9 @@ JNSienaBayes <- function(sbo,
                          hyper_only = TRUE, 
                          round_res = 3, 
                          noTitle = NULL,
-                         color_mid = 'white', 
-                         color_low = '#F05039',
-                         color_high = '#000066', 
+                         color_mid = '#EBCC2A', 
+                         color_low = '#3B9AB2',
+                         color_high = '#F21A00', 
                          color_values = 'grey40',
                          color_grid = 'black', 
                          grid_density = 0.01,
@@ -87,7 +87,7 @@ JNSienaBayes <- function(sbo,
   
   color_args <- list(color_mid = color_mid, 
                      color_low = color_low,
-                     color_high = color_high, 
+                     color_high = color_high,
                      color_values = color_values,
                      color_grid = color_grid, 
                      grid_density = grid_density,
@@ -117,7 +117,7 @@ JNSienaBayes <- function(sbo,
                 color_args))
     } else {
       do.call(jnb_support2,
-              list(theta = theta, 
+              c(list(theta = theta, 
                    group = group, 
                    theta_1 = theta_1, 
                    theta_2 = theta_2,
@@ -127,7 +127,8 @@ JNSienaBayes <- function(sbo,
                    theta_1_vals = theta_1_vals, 
                    theta_2_vals = theta_2_vals,
                    save = save, 
-                   folder = folder))
+                   folder = folder),
+                color_args))
     }
   }
   

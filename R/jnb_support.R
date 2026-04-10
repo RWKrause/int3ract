@@ -46,6 +46,7 @@
 #' @import scales
 #' @import tidyr
 #' @import tibble
+#' @import wesanderson
 #'
 jnb_support2 <- function(theta, 
                          group, 
@@ -80,21 +81,24 @@ jnb_support2 <- function(theta,
     cbind(data.frame(theta     = theta_name,
                      moderator = mod_name), s)
   }
-
-
+  
+  
   make_plot <- function(plot_data, x_name, mod_name) {
     leg_label <- if (nchar(mod_name) < 26) {mod_name} else {"Moderator"}
-    ggplot2::ggplot(plot_data, ggplot2::aes(x = parameter),
-                    group  = modValue,
-                    fill   = as.numeric(as.character(modValue)),
-                    color  = as.numeric(as.character(modValue))) +
-  scale_fill_gradient2(low = color_low, mid = color_mid, 
-                       high = color_high, midpoint = 0) +
-  scale_color_gradient2(low = color_low, mid = color_mid, 
-                        high = color_high, midpoint = 0) +
+    
+    plot_data$modValue <- as.numeric(as.character(plot_data$modValue))
+    
+    ggplot2::ggplot(plot_data,
+                    ggplot2::aes(x      = parameter,
+                                 group  = modValue,
+                                 fill   = modValue,
+                                 color  = modValue)) +
       ggplot2::geom_vline(xintercept = 0) +
-      ggplot2::geom_density(alpha = 0.1,
-                            ggplot2::aes(fill = modValue, color = modValue)) +
+      ggplot2::geom_density(alpha = 0.1) +
+      ggplot2::scale_fill_gradient2(low  = color_low,  mid = color_mid,
+                                    high = color_high, midpoint = 0) +
+      ggplot2::scale_color_gradient2(low  = color_low,  mid = color_mid,
+                                     high = color_high, midpoint = 0) +
       ggplot2::theme_bw() +
       ggplot2::labs(
         title = paste0("Posterior density for ", x_name,
@@ -336,7 +340,7 @@ jnb_support3 <- function(theta,
   names(plotsMean) <- ns
   plotsP           <- plotsMean
   
-
+  
   for (i in 1:3) {
     pat      <- tables[[i]][!tables[[i]]$sig, ]
     mods_out <- ns[-i]  
@@ -391,9 +395,9 @@ jnb_support3 <- function(theta,
     
     if (save) {
       ggplot2::ggsave(sprintf(base_path, "Posterior density"),
-             plot = plotsMean[[i]], dpi = 600, width = 10, height = 10)
+                      plot = plotsMean[[i]], dpi = 600, width = 10, height = 10)
       ggplot2::ggsave(sprintf(base_path, "Bayesian p-value"),
-             plot = plotsP[[i]],   dpi = 600, width = 10, height = 10)
+                      plot = plotsP[[i]],   dpi = 600, width = 10, height = 10)
     }
   }
   

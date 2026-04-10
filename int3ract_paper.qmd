@@ -21,7 +21,7 @@ abstract: |
   which a focal effect is and is not statistically significant. The
   **int3ract** package for R implements the JN technique and its three-way
   extension (the Johnson--Neyman--Krause, or JNK, technique) for both
-  frequentist and Bayesian models. The core function `freq_int()`
+  frequentist and Bayesian models. The core function `JNK_int()`
   can be applied to multiplicative interactions from (virtually) any model family. Dedicated
   wrappers (`JNK_lm()` and `JNK_siena()`) streamline the workflow for
   models fitted via `lm()`/`glm()` and **RSiena**'s `siena()`,
@@ -75,7 +75,7 @@ and **jtools** [@Long2020]. The contribution of **int3ract** is threefold.
    heatmap over the two-dimensional moderator grid rather than a single-axis 
    ribbon plot.
 
-2. **Model-agnostic frequentist engine.** The internal function `freq_int()`
+2. **Model-agnostic frequentist engine.** The internal function `JNK_int()`
    requires only a coefficient vector and the relevant sub-matrix of the
    parameter covariance matrix. It therefore applies to any frequentist
    model that produces these quantities---ordinary least squares, generalised
@@ -189,18 +189,18 @@ The package is organised into four layers, summarised in @tbl-hierarchy.
 
 | Entry point | Model class | Core engine |
 |---|---|---|
-| `JNK_lm()` | `lm`, `glm` | `freq_int()` |
-| `JNK_siena()` | `sienaFit` (frequentist) | `freq_int()` |
+| `JNK_lm()` | `lm`, `glm` | `JNK_int()` |
+| `JNK_siena()` | `sienaFit` (frequentist) | `JNK_int()` |
 | `JNSienaBayes()` | `multiSiena` (Bayesian) | `jnb_support2()`, `jnb_support3()` |
-| `freq_int()` | *any* (generic) | `parFun()`, `seFun()` |
+| `JNK_int()` | *any* (generic) | `parFun()`, `seFun()` |
 
 : Function hierarchy of **int3ract**. User-facing wrappers extract the relevant coefficients and covariance sub-matrix from the model object and pass them to the appropriate engine. {#tbl-hierarchy}
 
 **Utility layer (`utils.R`).**  
 `parFun()` and `seFun()` implement @eq-theta3way and @eq-se3way. 
 
-**Core frequentist engine (`freq_int()`).**  
-The function `freq_int()` accepts `name` (character vector of variable names),
+**Core frequentist engine (`JNK_int()`).**  
+The function `JNK_int()` accepts `name` (character vector of variable names),
 `coefs` (named numeric vector of model coefficients), `covar` (the
 corresponding covariance sub-matrix), and `vals` (a list of moderator value
 ranges). When a 2-way interaction is analysed, it returns two ribbon plots and two data
@@ -208,16 +208,16 @@ frames; when a 3-way interaction, it returns three heatmaps together with the
 underlying matrices of point estimates, standard errors, $p$-values, and
 significance indicators.
 
-Crucially, `freq_int()` is model-agnostic. Any researcher who can extract a
+Crucially, `JNK_int()` is model-agnostic. Any researcher who can extract a
 coefficient vector and covariance matrix from their model (whether fitted by
-`lm()`, `glmer()`, `coxph()`, or any other estimator) can call `freq_int()`
+`lm()`, `glmer()`, `coxph()`, or any other estimator) can call `JNK_int()`
 directly. The function can also be applied to Bayesian estimations, if one 
 would reduce the posteriors to their mean and covariance structure.
 
 **Frequentist wrappers.**  
 `JNK_lm()` extracts `coefficients` and `vcov()` from an `lm` or `glm` object
 and constructs the interaction-term names following $\textsf{R}$'s standard `:` 
-convention before delegating to `freq_int()`.
+convention before delegating to `JNK_int()`.
 
 `JNK_siena()` extracts `$theta` and `$covtheta` from a `sienaFit` object.
 Because **RSiena** effects are harder to index by name^[While effects are 
@@ -356,7 +356,7 @@ When all three moderator ranges contain fewer than eight distinct values, the
 point estimate is printed in each cell; otherwise only the colour gradient
 communicates the magnitude. The ranges for each variable are by default
 extracted from the `lm`/`glm` object but need to be supplied explicitly to 
-`freq_int()` or explicitly (see the code chunk below for `JNK_siena()`).
+`JNK_int()` or explicitly (see the code chunk below for `JNK_siena()`).
 
 ### Stochastic Actor-Oriented Models (`JNK_siena()`)
 
@@ -397,9 +397,9 @@ The moderator value ranges (`theta_1vals`, `theta_2vals`, `theta_3vals`)
 should reflect the empirical support of the corresponding change statistics.
 By default `range_size = 500` equidistant points are drawn from these ranges. The returned tables and plots are named as derived from the model using the `name' column in the **RSiena** effects object.
 
-### Direct Use of `freq_int()`
+### Direct Use of `JNK_int()`
 
-Because `freq_int()` requires only a coefficient vector and a covariance
+Because `JNK_int()` requires only a coefficient vector and a covariance
 matrix, it is straightforward to apply it to models not covered by the
 existing wrappers. For instance, for a mixed-effects model fitted with
 **lme4**:
@@ -416,7 +416,7 @@ all_coef <- fixef(lme_mod)
 all_vcov <- as.matrix(vcov(lme_mod))
 sel      <- c("x", "z", "x:z")
 
-freq_int(name  = c("x", "z"),
+JNK_int(name  = c("x", "z"),
          coefs = all_coef[sel],
          covar = all_vcov[sel, sel],
          vals  = list(range(dat$x), range(dat$z)),
@@ -430,12 +430,40 @@ that provides parameter estimates and their covariances.
 ## Bayesian Usage: `JNSienaBayes()` {#sec-bayes}
 
 For multi-group Bayesian SAOMs estimated with **multiSiena** 
-[@SienaMult;@Kosk23],
-the full posterior distribution over model parameters replaces the
-class JN-framework. The function `JNSienaBayes()`
-automatically detects whether each required parameter has been estimated as a
-fixed effect ($\mu$; shared across groups) or as a
-random effect ($\eta$; group-varying, with a hyper-parameter), and extracts the appropriate posterior draws.
+[@SienaMult;@Kosk23], a series of conditional posterior distributions over the
+range of the moderator replaces the classic JN-framework. If the moderator range
+is given explicitly with fewer than eight unique values, distinct colors are
+used to plot each The function
+`JNSienaBayes()` automatically detects whether each required parameter has been
+estimated as a fixed effect ($\eta$; shared across groups) or as a random effect
+($\mu$; group-varying, with a hyper-parameter), and extracts the appropriate
+posterior draws.
+
+The returned object is a named list similar to those returned for frequentist 
+interactions. Each table here contains the posterior mean, posterior SD,
+Bayesian $p$-value
+($\Pr(\tilde{\theta}_X > 0 \mid \text{data}, \text{model}, \text{prior})$), 
+and 2.5th and 97.5th percentiles of the conditional posterior for each moderator
+value.
+
+When `hyper_only = FALSE` and at least one of the involved parameters is
+randomly varying between groups, `JNSienaBayes()` additionally loops over all $G$ groups and produces
+group-specific plots and tables, returned under the key
+`random_groups_effects`. This is useful for assessing heterogeneity of
+interaction effects across networks. Two additional arguments are helpful 
+when many plots are made: `save = TRUE` will save each plot with `ggsave()`. 
+To avoid cluttering your working directory, `folder` provides the location of 
+a folder where the plots will be stored. If no input is provided, a new folder 
+`int3ract JNplots` will be created (note that RStudio will ask you in the 
+console whether such a folder is allowed to be created, if it does not exist 
+yet).
+
+For three-way interactions, the call is extended as usual. The
+`thresholds` argument (a vector of length 2, e.g., `c(0.05, 0.95)`)
+determines which cells of the posterior-mean heatmap are crosshatched: cells
+whose Bayesian $p$-value falls inside the interval
+$[\mathrm{threshold}_1, \mathrm{threshold}_2]$ are treated as
+non-significant. 
 
 ```{r}
 #| label: example-bayes-2way
@@ -466,7 +494,7 @@ jnb2 <- JNSienaBayes(sbo          = my_multiSiena_result,
 #|    variance when reciprocity would decrease (i.e., a reciprocal tie to
 #|    someone with negative values on the covariate would be broken,
 #|    leading to -1 in recirpocity but overall an increase in altX)."
-#|   - "Posterior densities for reciprocity conditional on simultaneous changes in altX. Here, while generally positive, reciprocity only has a consistently positive effect on tie formation when altX changes moderately, around -1 to 1 (curves with low color saturation). While reciprocity gets more positive with increasing values in the change of altX, the posterior variance increases as well."
+#|   - "Posterior densities for reciprocity conditional on simultaneous changes in altX. Here, while generally positive, reciprocity only has a consistently positive effect on tie formation when altX changes moderately, around -1 to 1 (yellow curves). While reciprocity gets more positive with increasing values in the change of altX, the posterior variance increases as well."
 #| layout: [[1]]
 #| fig-width: 4.5
 #| fig-height: 3
@@ -502,16 +530,20 @@ t1plotData <- data.frame(modValue = as.factor(rep(round(c(-1,0,1),3),
 t2plotData <- data.frame(modValue = as.factor(rep(round(seq(-3,3,0.5),3),
                                                   each = nrow(theta))),
                          parameter = theta_2x)
+t1plotData$modValue <- as.numeric(as.character(t1plotData$modValue))
 
-
-t2plotData$modValue <- as.numeric(as.character(t2plotData$modValue))
-
-
-g1 <- ggplot(t1plotData, aes(x = parameter)) +
+g1 <- ggplot(t1plotData, aes(x = parameter,
+                             group = modValue,
+                       fill  = modValue,
+                       color = modValue)) +
   geom_vline(xintercept = 0) +
   geom_density(alpha = 0.1, aes(fill = modValue, color = modValue)) +
   theme_bw() +
   xlab('altX') +
+  ggplot2::scale_fill_gradient2(low  = "#3B9AB2",  mid = "#EBCC2A",
+                                        high = "#F21A00", midpoint = 0) +
+ggplot2::scale_color_gradient2(low  = "#3B9AB2",  mid = "#EBCC2A",
+                                         high = "#F21A00", midpoint = 0) +
   ggtitle('Posterior distribution for altX \nconditional on Reciprocity') +  
   labs(color = 'Reciprocity Change',
        fill  = 'Reciprocity Change') 
@@ -523,10 +555,10 @@ g2 <- ggplot(t2plotData, aes(x = parameter,
                               color  = as.numeric(as.character(modValue)))) +
   geom_vline(xintercept = 0) +
   geom_density(alpha = 0.1) +
-  scale_fill_gradient2(low = "#F05039", mid = "white", 
-                       high = "#000066", midpoint = 0) +
-  scale_color_gradient2(low = "#F05039", mid = "white", 
-                        high = "#000066", midpoint = 0) +
+  ggplot2::scale_fill_gradient2(low  = "#3B9AB2",  mid = "#EBCC2A",
+                                        high = "#F21A00", midpoint = 0) +
+ggplot2::scale_color_gradient2(low  = "#3B9AB2",  mid = "#EBCC2A",
+                                         high = "#F21A00", midpoint = 0) +
   theme_bw() +
   xlab('Reciprocity') +
   ggtitle('Posterior distribution for Reciprocity \nconditional on altX') +
@@ -535,31 +567,9 @@ g2 <- ggplot(t2plotData, aes(x = parameter,
 g1
 g2
 ```
-The returned object is a named list similar to those returned for frequentist 
-interactions. Each table here
-contains the posterior mean, posterior SD, Bayesian $p$-value
-($\Pr(\tilde{\theta}_X > 0 \mid \text{data}, \text{model}, \text{prior})$), 
-and 2.5th and 97.5th percentiles of the conditional posterior for each moderator
-value.
 
-When `hyper_only = FALSE` and at least one of the involved parameters is
-randomly varying between groups, `JNSienaBayes()` additionally loops over all $G$ groups and produces
-group-specific plots and tables, returned under the key
-`random_groups_effects`. This is useful for assessing heterogeneity of
-interaction effects across networks. Two additional arguments are helpful 
-when many plots are made: `save = TRUE` will save each plot with `ggsave()`. 
-To avoid cluttering your working directory, `folder` provides the location of 
-a folder where the plots will be stored. If no input is provided, a new folder 
-`int3ract JNplots` will be created (note that RStudio will ask you in the 
-console whether such a folder is allowed to be created, if it does not exist 
-yet).
 
-For three-way interactions, the call is extended as usual. The
-`thresholds` argument (a vector of length 2, e.g., `c(0.05, 0.95)`)
-determines which cells of the posterior-mean heatmap are crosshatched: cells
-whose Bayesian $p$-value falls inside the interval
-$[\mathrm{threshold}_1, \mathrm{threshold}_2]$ are treated as
-non-significant. 
+
 
 ```{r}
 #| label: example-bayes-3way
@@ -717,7 +727,12 @@ All plots are standard **ggplot2** objects [@Wickham2016] and can be further
 modified using **ggplot2**'s layer system. The crosshatch pattern for
 non-significant regions is produced by **ggpattern** [@ggpattern2022].
 @tbl-colors documents the colour and pattern parameters shared across all
-plotting functions.
+plotting functions. The colours for high, mid, and low point for continuous
+plots are taken from the `Zissou1` palette from the **wesanderson** package
+[@wesanderson]. Direct use of palettes is not supported but users can always
+overlay their own color palettes post-hoc by calling
+`scale_fill_gradient2()`/`scale_color_gradient2()` (for more and alternatives
+see `?ggplot2::scale_fill_gradient()`).
 
 ```{r}
 #| label: tbl-colors
@@ -731,12 +746,12 @@ library(gt)
 # Rows without a colour default (grid_density, grid_spacing,
 # crosshatch_non_sig) get NA and are left unstyled.
 bg_cols <- c("#43CD80", "#D2691E", "#000000",
-             "#F05039", "#FFFFFF", "#000066",
+             "#3B9AB2", "#EBCC2A", "#F21A00",
              "#000000",  NA,        NA,
              "#666666",  NA)
 
 fg_cols <- c("#000000", "#FFFFFF", "#FFFFFF",
-             "#FFFFFF", "#000000", "#FFFFFF",
+             "#000000", "#000000", "#FFFFFF",
              "#FFFFFF",  NA,        NA,
              "#FFFFFF",  NA)
 
@@ -810,7 +825,7 @@ tbl
 **int3ract** provides a unified interface for the Johnson--Neyman technique
 and its three-way extension across a broad class of frequentist and Bayesian
 models. By exposing the core computation in a single model-agnostic function,
-`freq_int()`, the package invites adoption beyond the two model classes for
+`JNK_int()`, the package invites adoption beyond the two model classes for
 which dedicated wrappers currently exist. Future development plans include:
 
 1. A wrapper for `merMod` objects from **lme4** to allow for randomly varying interactions.

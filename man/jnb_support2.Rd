@@ -14,6 +14,9 @@ jnb_support2(
   theta_int_12,
   theta_1_vals,
   theta_2_vals,
+  color_mid = color_mid,
+  color_low = color_low,
+  color_high = color_high,
   save,
   folder
 )
