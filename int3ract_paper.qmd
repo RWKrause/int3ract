@@ -797,10 +797,10 @@ params <- data.frame(
     "Within-cell text colour (heatmaps, \u2264 7 values)",
     "If TRUE, crosshatch marks the non-significant region"
   ),
-  Default = c("`seagreen3'", "`chocolate'", "`black'",
-              "`#F05039'",  "`white'",     "`#000066'",
-              "`black'",    "0.01",         "0.1",
-              "`grey40'",   "TRUE"),
+  Default = c("'seagreen3'", "'chocolate'", "'black'",
+              "'#F05039'",  "'#EBCC2A'",     "'#000066'",
+              "'black'",    "0.01",         "0.1",
+              "'grey40'",   "TRUE"),
   stringsAsFactors = FALSE
 )
 
