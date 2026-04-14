@@ -15,9 +15,12 @@ License: GPL-3.0
 Encoding: UTF-8
 LazyData: true
 Imports:
+  dplyr,
   tibble,
   tidyr,
   ggplot2,
   ggpattern,
   scales
+Suggests:
+  lme4
 RoxygenNote: 7.3.3

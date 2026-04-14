@@ -145,11 +145,9 @@ JNK_bayes <- function(x,
     eff <- eff[!rates, ]
     rownames(eff) <- seq_len(nrow(eff))
     
-    clean_name <- function(n) gsub(':', '', gsub('/', 'o', gsub('\\^', '', n)))
-    
-    theta_1n <- clean_name(eff$effectName[theta_1])
-    theta_2n <- clean_name(eff$effectName[theta_2])
-    theta_3n <- if (threeWay) clean_name(eff$effectName[theta_3]) else NULL
+    theta_1n <- .clean_effect_name(eff$effectName[theta_1])
+    theta_2n <- .clean_effect_name(eff$effectName[theta_2])
+    theta_3n <- if (threeWay) .clean_effect_name(eff$effectName[theta_3]) else NULL
     
     idx <- seq(burn_in, nrow(x$ThinParameters), thin)
     
