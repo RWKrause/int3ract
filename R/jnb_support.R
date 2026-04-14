@@ -65,9 +65,9 @@ jnb_support2 <- function(theta,
   make_td <- function(param_vec, mod_vals, theta_name, mod_name) {
     d <- data.frame(
       modValue  = as.factor(rep(round(mod_vals, 3), each = nrow(theta))),
-      parameter = param_vec,
-      group     = group
+      parameter = param_vec
     )
+    if (!is.null(group)) d$group <-  group
     s <- d |>
       dplyr::summarize(
         thetaPostMean = mean(parameter),
@@ -103,8 +103,13 @@ jnb_support2 <- function(theta,
                                      high = color_high, midpoint = 0) +
       ggplot2::theme_bw() +
       ggplot2::labs(
-        title = paste0("Posterior density for ", x_name,
-                       "\n moderated by ", mod_name, " (", group, ")"),
+        title = if (is.null(group)) {
+            paste0("Posterior density for ", x_name,
+                 "\n moderated by ", mod_name)
+          } else {
+            paste0("Posterior density for ", x_name,
+                   "\n moderated by ", mod_name, " (", group, ")")
+            },
         x     = x_name,
         y     = "Posterior Density",
         color = leg_label,
@@ -112,20 +117,21 @@ jnb_support2 <- function(theta,
       )
   }
   
-  make_path <- function(tn, mn) {
-    file.path(folder, paste0("Posterior density for ", tn,
-                             " moderated by ", mn, " (", group, ").png"))
-  }
+
   theta_1x <- as.vector(outer(theta[, 3], theta_2_vals, `*`)) + theta[, 1]
   theta_2x <- as.vector(outer(theta[, 3], theta_1_vals, `*`)) + theta[, 2]
   
   t1plotData <- data.frame(modValue  = as.factor(rep(round(theta_2_vals, 3),
                                                      each = nrow(theta))),
-                           parameter = theta_1x, 
-                           group = group)
+                           parameter = theta_1x)
   t2plotData <- data.frame(modValue  = as.factor(rep(round(theta_1_vals, 3),
                                                      each = nrow(theta))),
-                           parameter = theta_2x, group = group)
+                           parameter = theta_2x)
+  if (!is.null(group)) {
+    t1plotData$group <- group
+    t2plotData$group <- group
+  }
+  
   
   t1d <- make_td(theta_1x, theta_2_vals, theta_1n, theta_2n)
   t2d <- make_td(theta_2x, theta_1_vals, theta_2n, theta_1n)
@@ -140,6 +146,15 @@ jnb_support2 <- function(theta,
                    color_high = color_high)
   
   if (save) {
+    make_path <- function(tn, mn) {
+      if (is.null(group)) {
+        file.path(folder, paste0("Posterior density for ", tn,
+                                 " moderated by ", mn,".png"))
+      } else {
+        file.path(folder, paste0("Posterior density for ", tn,
+                                 " moderated by ", mn, " (", group, ").png"))
+      }
+    }
     ggplot2::ggsave(make_path(theta_1n, theta_2n), plot = g1, dpi = 600,
                     width = 10, height = 10)
     ggplot2::ggsave(make_path(theta_2n, theta_1n), plot = g2, dpi = 600,
@@ -353,23 +368,15 @@ jnb_support3 <- function(theta,
     pat      <- tables[[i]][!tables[[i]]$sig, ]
     mods_out <- ns[-i]  
     
-    mod_str  <- paste0(mods_out[[1]], 
-                       " and ", 
-                       mods_out[[2]], 
-                       " (", group, ")")
-    base_path <- file.path(folder,
-                           paste0("%s for ", 
-                                  ns[i], 
-                                  " moderated by ", 
-                                  mod_str, ".png"))
-    
     plotsMean[[i]] <- make_heatmap(
       data       = tables[[i]],
       fill_var   = "thetaPostMean",
       midpoint   = 0,
-      title      = paste0("Average posterior density for ", 
-                          ns[i], 
-                          " (", group, ")"),
+      title      = if (is.null(group)) {
+          paste0("Average posterior density for ",ns[i])
+        } else {
+          paste0("Average posterior density for ", ns[i], " (", group, ")")
+          },
       xlab       = mods_out[[1]],
       ylab       = mods_out[[2]],
       fill_label = "Posterior Mean",
@@ -386,9 +393,11 @@ jnb_support3 <- function(theta,
       data       = tables[[i]],
       fill_var   = "bayes_p",
       midpoint   = 0.5,
-      title      = paste0("Bayesian p-value for ", 
-                          ns[i], 
-                          " (", group, ")"),
+      title      = if (is.null(group)) {
+          paste0("Bayesian p-value for ", ns[i])
+        } else {
+          paste0("Bayesian p-value for ", ns[i], " (", group, ")")
+        },
       xlab       = mods_out[[1]],
       ylab       = mods_out[[2]],
       fill_label = expression("Bayesian" ~ italic("p") * "-value"),
@@ -402,6 +411,18 @@ jnb_support3 <- function(theta,
     )
     
     if (save) {
+      if (is.null(group)) {
+        mod_str  <- paste0(mods_out[[1]], " and ", mods_out[[2]])
+      } else {
+        mod_str  <- paste0(mods_out[[1]], " and ", mods_out[[2]], 
+                           " (", group, ")")
+      }
+      
+      base_path <- file.path(folder,
+                             paste0("%s for ", 
+                                    ns[i], 
+                                    " moderated by ", 
+                                    mod_str, ".png"))
       ggplot2::ggsave(sprintf(base_path, "Posterior density"),
                       plot = plotsMean[[i]], dpi = 600, width = 10, height = 10)
       ggplot2::ggsave(sprintf(base_path, "Bayesian p-value"),
