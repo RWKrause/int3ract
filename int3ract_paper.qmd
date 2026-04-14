@@ -23,14 +23,15 @@ abstract: |
   which a focal effect is and is not statistically significant. The
   **int3ract** package for R implements the JN technique and its three-way
   extension (the Johnson--Neyman--Krause, or JNK, technique) for both
-  frequentist and Bayesian models. The core function `JNK_int()`
-  can be applied to multiplicative interactions from (virtually) any model
-  family. Dedicated
-  wrappers (`JNK_lm()` and `JNK_siena()`) streamline the workflow for
-  models fitted via `lm()`/`glm()` and **RSiena**'s `siena()`,
-  respectively. For Bayesian Stochastic Actor-Oriented Models (SAOMs)
-  estimated with **multiSiena**, the function `JNSienaBayes()` produces
-  conditional posterior distributions. For two-way interactions, classic shaded
+  frequentist and Bayesian models. The function `JNK_freq()`
+  auto-detects models fitted via `lm()`/`glm()`, **RSiena**'s `siena()`,
+  or **lme4**'s `lmer()`/`glmer()`, but can also be applied to
+  multiplicative interactions from (virtually) any model family by
+  supplying a coefficient vector and covariance matrix directly.
+  For Bayesian Stochastic Actor-Oriented Models (SAOMs) estimated with
+  **multiSiena**, or any model producing posterior draws, the function
+  `JNK_bayes()` produces conditional posterior distributions.
+  For two-way interactions, classic shaded
   confidence-band plots  are created that visually demarcate significant and
   non-significant regions along the moderator range; three-way interactions
   yield colour-gradient heatmaps with optional crosshatch overlays for
@@ -72,30 +73,33 @@ Originally proposed in the context of the analysis of covariance
 [@Potthoff1964] and updated by @Bauer2005, whose
 formulation is closest to what **int3ract** implements. Several R packages
 already address the two-way JN case, for instance,  **interactions** [@Long2019]
-and **jtools** [@Long2020]. The contribution of **int3ract** is threefold.
+and **jtools** [@Long2020] but none does so for three-way interactions. The
+contribution of **int3ract** is threefold.
 
 1. **Three-way interactions.** The package provides a complete implementation
    of the JNK technique for three-way multiplicative interactions, producing a
    heatmap over the two-dimensional moderator grid rather than a single-axis 
    ribbon plot.
 
-2. **Model-agnostic frequentist engine.** The internal function `JNK_int()`
-   requires only a coefficient vector and the relevant sub-matrix of the
-   parameter covariance matrix. It therefore applies to any frequentist
-   model that produces these quantities---ordinary least squares, generalised
-   linear models, mixed-effects models, survival models, or Stochastic
-   Actor-Oriented Models---without modification.
+2. **Model-agnostic frequentist engine.** `JNK_freq()` auto-detects `lm`,
+   `glm`, `sienaFit`, and `lmerMod`/`glmerMod` objects, but also accepts a
+   raw coefficient vector and covariance sub-matrix. It therefore applies to
+   any model that produces these quantities -- ordinary least
+   squares, generalised linear models, mixed-effects models, survival models,
+    etc. -- without modification. For **lme4**
+   models with random interaction terms, per-group Johnson--Neyman plots are
+   available via `fixed_only = FALSE`.
 
-3. **Bayesian SAOMs.** The function `JNSienaBayes()` adapts the technique to
-   the posterior distribution rather than the sampling distribution, producing
+3. **Bayesian models.** The function `JNK_bayes()` adapts the technique to
+   the posterior distribution rather than point estimates, producing
    density plots (two-way) and posterior-mean heatmaps with Bayesian
-   $p$-value overlays (three-way) for models estimated with **multiSiena**.
+   $p$-value overlays (three-way). It accepts **multiSiena** objects directly
+   or raw posterior-draw matrices from any Bayesian estimation.
 
 The remainder of the paper is organised as follows. @sec-background reviews
 the statistical background of the JN technique and its three-way extension.
 @sec-package describes the package architecture. @sec-freq and @sec-bayes
-illustrate the frequentist and Bayesian workflows with worked examples.
-@sec-graphics discusses graphical customisation. @sec-conc concludes.
+illustrate the frequentist and Bayesian workflows with worked examples. @sec-SAOM discussed the application to Stochastic Actor-Oriented Models (SAOMs) estimated with **RSiena** and **multiSiena**. @sec-graphics discusses graphical customisation. @sec-conc concludes.
 
 ## Statistical Background {#sec-background}
 
@@ -190,58 +194,46 @@ hypothesis $\theta_X = 0$ should be rejected given the chosen $\alpha$-threshold
 
 ## Package Architecture {#sec-package}
 
-The package is organised into four layers, summarised in @tbl-hierarchy.
+The package is organised around two exported functions and a shared utility
+layer, summarised in @tbl-hierarchy.
 
-| Entry point | Model class | Core engine |
+| Function | Accepted input | Internal engine |
 |---|---|---|
-| `JNK_lm()` | `lm`, `glm` | `JNK_int()` |
-| `JNK_siena()` | `sienaFit` (frequentist) | `JNK_int()` |
-| `JNSienaBayes()` | `multiSiena` (Bayesian) | `jnb_support2()`, `jnb_support3()` |
-| `JNK_int()` | *any* (generic) | `parFun()`, `seFun()` |
+| `JNK_freq()` | `lm`, `glm`, `sienaFit`, `lmerMod`/`glmerMod`, or raw `covar`/`coefs` | `.freq_core()`, `parFun()`, `seFun()` |
+| `JNK_bayes()` | `multiSiena`/`sienaBayesFit`, or raw posterior-draw matrix | `jnb_support2()`, `jnb_support3()` |
 
-: Function hierarchy of **int3ract**. User-facing wrappers extract the relevant
-coefficients and covariance sub-matrix from the model object and pass them to
-the appropriate engine. {#tbl-hierarchy}
+: Function hierarchy of **int3ract**. Both exported functions auto-detect the
+model class and extract the relevant quantities before delegating to internal
+engines in `utils.R`. {#tbl-hierarchy}
 
-**Utility layer (`utils.R`).**  
-`parFun()` and `seFun()` implement @eq-theta3way and @eq-se3way. 
+**Utility layer (`utils.R`).**
+All internal helpers reside in a single file. `parFun()` and `seFun()` implement
+@eq-theta3way and @eq-se3way. Model-specific extractors (`.extract_lm()`,
+`.extract_siena()`, `.extract_lme4()`) handle the class-specific logic for
+`JNK_freq()`. The Bayesian support functions `jnb_support2()` and
+`jnb_support3()` produce the posterior-based plots for `JNK_bayes()`.
 
-**Core frequentist engine (`JNK_int()`).**  
-The function `JNK_int()` accepts `name` (character vector of variable names),
-`coefs` (named numeric vector of model coefficients), `covar` (the
-corresponding covariance sub-matrix), and `vals` (a list of moderator value
-ranges). When a 2-way interaction is analysed, it returns two ribbon plots and
-two data frames; when a 3-way interaction, it returns three heatmaps together
-with the underlying matrices of point estimates, standard errors, $p$-values,
-and significance indicators.
+**Frequentist engine (`JNK_freq()`).**
+`JNK_freq()` auto-detects the class of its first argument and extracts
+coefficients, a covariance sub-matrix, variable names, and moderator value
+ranges. For `lm`/`glm` and `lmerMod`/`glmerMod` objects, interaction-term names
+are resolved automatically regardless of colon ordering. 
+Researchers who can extract a coefficient vector and covariance matrix from any
+other model (whether fitted by `coxph()`, `betareg()`, or any other estimator)
+can call `JNK_freq()` directly by supplying `covar` and `coefs`.
 
-Crucially, `JNK_int()` is model-agnostic. Any researcher who can extract a
-coefficient vector and covariance matrix from their model (whether fitted by
-`lm()`, `glmer()`, `coxph()`, or any other estimator) can call `JNK_int()`
-directly. The function can also be applied to Bayesian estimations, if one 
-would reduce the posteriors to their mean and covariance structure.
+For **lme4** models with random interaction terms, setting `fixed_only = FALSE`
+produces per-group Johnson--Neyman plots using the group-specific coefficients
+(fixed effects + BLUPs), mirroring the group-level output of `JNK_bayes()`.
 
-**Frequentist wrappers.**  
-`JNK_lm()` extracts `coefficients` and `vcov()` from an `lm` or `glm` object
-and constructs the interaction-term names following $\textsf{R}$'s standard `:` 
-convention before delegating to `JNK_int()`.
+**Bayesian engine (`JNK_bayes()`).**
+For Bayesian models there is no single-point estimate or analytic covariance
+matrix. Instead, conditional posteriors are used. `JNK_bayes()` accepts either
+a raw matrix of posterior draws or a `multiSiena`/`sienaBayesFit` object 
+(handling burn-in removal, thinning, and detection of fixed vs. random 
+parameters).
 
-`JNK_siena()` extracts `$theta` and `$covtheta` from a `sienaFit` object.
-Because **RSiena** effects are harder to index by name^[While effects are 
-identifyable by name, in complex models the same effect can appear multiple 
-times for different dependent variables and/or as different effect types, making
- it harder on the user to provide accurate input to the `JNK_siena()` compared
-  to using the already provided numbering system in `siena()` outputs.], the 
-  user supplies the indices for all main effects and interaction terms. 
-
-**Bayesian engine (`JNSienaBayes()`, `jnb_support2()`, `jnb_support3()`).**  
-For Bayesian SAOMs there is no single-point estimate or analytic covariance
-matrix. Instead, conditional posteriors will be used. `JNSienaBayes()` handles
-burn-in removal and thinning, detects whether each parameter was estimated as
-fixed ($\eta$) or random ($\mu$), and routes to `jnb_support2()` for 2-way
-interactions or `jnb_support3()` for 3-way interactions.
-
-For two-way interactions, `jnb_support2()` computes the conditional posterior
+For two-way interactions, `JNK_bayes()` computes the conditional posterior
 draws
 
 $$
@@ -254,7 +246,7 @@ curves coloured by moderator value, and summarised by the posterior mean,
 posterior standard deviation, and Bayesian $p$-value
 $\Pr(\tilde{\theta}_X > 0 \mid \text{data}, \text{model}, \text{prior})$.
 
-For three-way interactions, `jnb_support3()` extends this to the grid
+For three-way interactions, this is extended to the grid
 $(m, w)$, producing heatmaps of both the posterior mean and the Bayesian
 $p$-value, each overlaid with a crosshatch on cells outside the user-specified
 "significance" thresholds.
@@ -263,7 +255,7 @@ $p$-value, each overlaid with a crosshatch on cells outside the user-specified
 
 ### Two-Way Interaction with `lm`
 
-The simplest entry point is `JNK_lm()` applied to an ordinary least-squares
+The simplest entry point is `JNK_freq()` applied to an ordinary least-squares
 model.
 
 ```{r}
@@ -277,15 +269,15 @@ dat <- data.frame(x = rnorm(100),
                   z = rnorm(100),
                   w = rnorm(100))
 
-dat$y = dat$x + 0.5 * dat$z + -.5 * dat$w + 0.5 * dat$x * 
+dat$y = dat$x + 0.5 * dat$z + -.5 * dat$w + 0.5 * dat$x *
   dat$z * dat$w + rnorm(100,sd = 4)
 
 mod2 <- lm(y ~ x * z, data = dat)
 
-jn2 <- JNK_lm(mod2,
-              theta_1 = "x",
-              theta_2 = "z",
-              alpha   = 0.05)
+jn2 <- JNK_freq(mod2,
+                theta_1 = "x",
+                theta_2 = "z",
+                alpha   = 0.05)
 ```
 
 ```{r}
@@ -329,11 +321,12 @@ elsewhere.
 #| dependson: "example-2way-lm"
 mod3 <- lm(y ~ x * z * w, data = dat)
 
-jn3 <- JNK_lm(mod3,
-               theta_1    = "x",
-               theta_2    = "z",
-               theta_3    = "w",
-               range_size = 50)
+jn3 <- JNK_freq(mod3,
+                theta_1    = "x",
+                theta_2    = "z",
+                theta_3    = "w",
+                range_size = 100)
+
 ```
 
 ```{r}
@@ -367,56 +360,14 @@ three heatmaps (i.e., $3 \times 2{,}500$ conditional effect evaluations).
 When all three moderator ranges contain fewer than eight distinct values, the
 point estimate is printed in each cell; otherwise only the colour gradient
 communicates the magnitude. The ranges for each variable are by default
-extracted from the `lm`/`glm` object but can also be supplied directly, which is
-always necessary for `JNK_int()` and `JNK_siena()` (see the code chunk below).
+extracted from the `lm`/`glm`/`lmerMod` object but can also be supplied
+directly, which is always necessary for `sienaFit` objects and the generic
+`covar`/`coefs` path (see the code chunks below).
 
-### Stochastic Actor-Oriented Models (`JNK_siena()`)
+### Mixed-Effects Models (**lme4**)
 
-SAOMs estimated by **RSiena**'s `siena()` (formerly `siena07()`) are the primary
- application domain for which this package was developed, because interaction 
-effects between network statistics and actor attributes are common yet difficult
-to interpret [@Snijders26]. The interface mirrors `JNK_lm()` but uses integer 
-indices referencing the position of each effect in the **RSiena** effects 
-object^[While each effect in **RSiena** is named, within a given model, effects are not necessarily identifiable by their name but the same name might appear multiple times for different dependent variables or effect types].
-
-```{r}
-#| label: example-siena
-#| eval: false
-# Two-way interaction
-x2 <- JNK_siena(res,
-                 theta_1      = 6,
-                 theta_2      = 7,
-                 theta_int_12 = 8,
-                 theta_1vals  = -10:10,
-                 theta_2vals  = -10:10)
-
-# Three-way extension
-x3 <- JNK_siena(res,
-                 theta_1       = 6,
-                 theta_2       = 7,
-                 theta_3       = 5,
-                 theta_int_12  = 8,
-                 theta_int_13  = 10,
-                 theta_int_23  = 9,
-                 theta_int_123 = 11,
-                 theta_1vals   = -10:10,
-                 theta_2vals   = -10:10,
-                 theta_3vals   = 0:6,
-                 range_size    = 10)
-```
-
-The moderator value ranges (`theta_1vals`, `theta_2vals`, `theta_3vals`)
-should reflect the empirical support of the corresponding change statistics.
-By default `range_size = 500` equidistant points are drawn from these ranges.
-The returned tables and plots are named as derived from the model using the
-`name' column in the **RSiena** effects object.
-
-### Direct Use of `JNK_int()`
-
-Because `JNK_int()` requires only a coefficient vector and a covariance
-matrix, it is straightforward to apply it to models not covered by the
-existing wrappers. For instance, for a mixed-effects model fitted with
-**lme4**:
+`JNK_freq()` natively supports `lmerMod` and `glmerMod` objects from **lme4**.
+For fixed effects the interface is identical to `lm`:
 
 ```{r}
 #| label: example-lme4
@@ -424,324 +375,181 @@ existing wrappers. For instance, for a mixed-effects model fitted with
 library(lme4)
 library(int3ract)
 
-lme_mod <- lmer(y ~ x * z + (1 | group), data = dat)
+lme_mod <- lmer(y ~ x * z + (x * z | group), data = dat)
 
-all_coef <- fixef(lme_mod)
-all_vcov <- as.matrix(vcov(lme_mod))
-sel      <- c("x", "z", "x:z")
+jn_lme <- JNK_freq(lme_mod,
+                   theta_1 = "x",
+                   theta_2 = "z")
+```
 
-JNK_int(name  = c("x", "z"),
-         coefs = all_coef[sel],
-         covar = all_vcov[sel, sel],
-         vals  = list(range(dat$x), range(dat$z)),
-         range_size = 1000)
+When the interaction terms are random, setting `fixed_only = FALSE` produces
+per-group Johnson--Neyman plots using group-specific coefficients (fixed
+effects + BLUPs). The grouping variable defaults to the first random-effects
+term but can be specified via `group_var`:
+
+```{r}
+#| label: example-lme4-groups
+#| eval: false
+jn_groups <- JNK_freq(lme_mod,
+                      theta_1    = "x",
+                      theta_2    = "z",
+                      fixed_only = FALSE,
+                      group_var  = "group")
+```
+
+### Direct Use with Coefficient Vectors
+
+Because `JNK_freq()` also accepts a raw coefficient vector and covariance
+matrix, it is straightforward to apply it to models not covered by the
+built-in extractors or to Bayesian models when the posterior is reduced to a
+covariance matrix and point estimates:
+
+```{r}
+#| label: example-generic
+#| eval: false
+JNK_freq(covar = my_vcov[c("x","z","x:z"), c("x","z","x:z")],
+         coefs = my_coefs[c("x","z","x:z")],
+         name  = c("x", "z"),
+         theta_1 = "x", theta_2 = "z",
+         theta_1_vals = c(-3, 3),
+         theta_2_vals = c(-3, 3))
 ```
 
 The same pattern applies to survival models (**survival**), ordinal regression
-(**MASS**), beta regression (**betareg**), and any other estimation that 
-that provides parameter estimates and their covariances.
+(**MASS**), beta regression (**betareg**), and any other estimation that
+provides parameter estimates and their covariances.
 
-## Bayesian Usage: `JNSienaBayes()` {#sec-bayes}
 
-For multi-group Bayesian SAOMs estimated with **multiSiena** 
-[@SienaMult;@Kosk23], a series of conditional posterior distributions over the
-range of the moderator replaces the classic JN-framework. If the moderator range
-is given explicitly with fewer than eight unique values, distinct colors are
-used to plot each The function
-`JNSienaBayes()` automatically detects whether each required parameter has been
-estimated as a fixed effect ($\eta$; shared across groups) or as a random effect
-($\mu$; group-varying, with a hyper-parameter), and extracts the appropriate
-posterior draws.
+## Bayesian Usage {#sec-bayes}
 
-The returned object is a named list similar to those returned for frequentist 
-interactions. Each table here contains the posterior mean, posterior SD,
-Bayesian $p$-value
-($\Pr(\tilde{\theta}_X > 0 \mid \text{data}, \text{model}, \text{prior})$), 
-and 2.5th and 97.5th percentiles of the conditional posterior for each moderator
-value.
+Using `JNK_bayes()` is as straightforward as using `JNK_freq()`. The function either expects a posterior matrix or sienaBayesFit/multiSiena object, from which it extracts the relevant posterior draws. The same arguments for specifying the parameters and their values apply as for `JNK_freq()`, but instead of confidence intervals and $p$-values, the output includes conditional posterior means, standard deviations, and Bayesian $p$-values 
+($\Pr(\tilde{\theta}_X > 0 \mid \text{data}, \text{model}, \text{prior})$).
 
-When `hyper_only = FALSE` and at least one of the involved parameters is
-randomly varying between groups, `JNSienaBayes()` additionally loops over all
-$G$ groups and produces group-specific plots and tables, returned under the key
-`random_groups_effects`. This is useful for assessing heterogeneity of
-interaction effects across networks. Two additional arguments are helpful 
-when many plots are made: `save = TRUE` will save each plot with `ggsave()`. 
-To avoid cluttering your working directory, `folder` provides the location of 
-a folder where the plots will be stored. If no input is provided, a new folder 
-`int3ract JNplots` will be created (note that RStudio will ask you in the 
-console whether such a folder is allowed to be created, if it does not exist 
-yet).
+Parameters can either be specified by name (here, the posterior matrix `x` should be named accordingly) or by integer index (the position of the parameter in the posterior matrix). If names are given, only `theta_1`, `theta_2`, and, if applicable, `theta_3` need to be specified and the interactions are detected automatically (interactions should be named with the standard $\textsf{R}$ notation for interactions, i.e., `x:z`). 
 
-For three-way interactions, the call is extended as usual. The
-`thresholds` argument (a vector of length 2, e.g., `c(0.05, 0.95)`)
+The `thresholds` argument (a vector of length 2, e.g., `c(0.05, 0.95)`)
 determines which cells of the posterior-mean heatmap are crosshatched: cells
 whose Bayesian $p$-value falls inside the interval
-$[\mathrm{threshold}_1, \mathrm{threshold}_2]$ are treated as
-non-significant. 
+$[\mathrm{threshold}_1, \mathrm{threshold}_2]$ can be treated as
+`non-significant'. 
+
+The function also handled burn-in iterations and thinning if desired via the the `thin` and `burn_in` arguments (default no thinning and no burn-in iterations).
 
 ```{r}
-#| label: example-bayes-2way
-#| eval: false
-jnb2 <- JNSienaBayes(sbo          = my_multiSiena_result,
-                     theta_1      = 4,
-                     theta_2      = 7,
-                     theta_int_12 = 9,
-                     theta_1_vals = c(-1,0,1),
-                     theta_2_vals = seq(-3,3,0.5),
-                     burnIn       = 500,
-                     thin         = 2,
-                     save         = FALSE)
-```
-
-
-```{r}
-#| label: fig-bayes-2fake
-#| echo: false
+#| label: example-2way-bayes
 #| eval: true
 #| cache: true
-#| fig-cap: >
-#|   Conditional posterior densities for the parameters for reciprocity and
-#|    altX on a attribute.
-#| fig-subcap:
-#|   - "Posterior densities for altX conditional on simultaneous changes in
-#|    reciprocity. In this example, altX is always positive but has larger
-#|    variance when reciprocity would decrease (i.e., a reciprocal tie to
-#|    someone with negative values on the covariate would be broken,
-#|    leading to -1 in recirpocity but overall an increase in altX)."
-#|   - "Posterior densities for reciprocity conditional on simultaneous changes
-#|    in altX. Here, while generally positive, reciprocity only has a
-#|    consistently positive effect on tie formation when altX changes
-#|    moderately, around -1 to 1 (yellow curves). While reciprocity gets more
-#|    positive with increasing values in the change of altX, the posterior
-#|    variance increases as well."
-#| layout: [[1]]
-#| fig-width: 4.5
-#| fig-height: 3
-set.seed(1402)
-dat <- data.frame(x = rnorm(100),
-                  z = rnorm(100),
-                  w = rnorm(100))
-dat$z <- ifelse(dat$z > 0,1,0)
-dat$y = dat$x + 0.5 * dat$z + -1 * dat$w 
+#| dependson: "example-2way-lm"
 
-#+ 0.5 * dat$x * 
-#  dat$z * dat$w + rnorm(100,sd = 4)
+library(MCMCpack)
 
-mod2 <- lm(y ~ x * z, data = dat)
-
-jn2 <- JNK_lm(mod2,
-              theta_1 = "x",
-              theta_2 = "z",
-              alpha   = 0.05)
-
-theta <- mvtnorm::rmvnorm(50000, coefficients(mod2)[2:4],vcov(mod2)[2:4,2:4])
-  
-  
-
-theta_1x <- as.vector(outer(theta[,3] , c(-1,0,1), 
-                            FUN = '*')) + theta[,1]
-theta_2x <- as.vector(outer(theta[,3] , seq(-3,3,0.5), FUN = '*')) + theta[,2]
-
-t1plotData <- data.frame(modValue = as.factor(rep(round(c(-1,0,1),3),
-                                                  each = nrow(theta))),
-                         parameter = theta_1x)
-
-t2plotData <- data.frame(modValue = as.factor(rep(round(seq(-3,3,0.5),3),
-                                                  each = nrow(theta))),
-                         parameter = theta_2x)
-t1plotData$modValue <- as.numeric(as.character(t1plotData$modValue))
-library(ggplot2)
-g1 <- ggplot(t1plotData, aes(x = parameter,
-                             group = modValue,
-                       fill  = modValue,
-                       color = modValue)) +
-  geom_vline(xintercept = 0) +
-  geom_density(alpha = 0.1, aes(fill = modValue, color = modValue)) +
-  theme_bw() +
-  xlab('altX') +
-  ggplot2::scale_fill_gradient2(low  = "#3B9AB2",  mid = "#EBCC2A",
-                                        high = "#F21A00", midpoint = 0) +
-ggplot2::scale_color_gradient2(low  = "#3B9AB2",  mid = "#EBCC2A",
-                                         high = "#F21A00", midpoint = 0) +
-  ggtitle('Posterior distribution for altX \nconditional on Reciprocity') +  
-  labs(color = 'Reciprocity Change',
-       fill  = 'Reciprocity Change') 
+mod_bayes2 <- MCMCregress(y ~ x * z, data = dat,
+                          burnin = 1000, mcmc = 10000, thin = 1,
+                          verbose = 0)
 
 
-g2 <- ggplot(t2plotData, aes(x = parameter,
-                              group  = modValue,
-                              fill   = as.numeric(as.character(modValue)),
-                              color  = as.numeric(as.character(modValue)))) +
-  geom_vline(xintercept = 0) +
-  geom_density(alpha = 0.1) +
-  ggplot2::scale_fill_gradient2(low  = "#3B9AB2",  mid = "#EBCC2A",
-                                        high = "#F21A00", midpoint = 0) +
-ggplot2::scale_color_gradient2(low  = "#3B9AB2",  mid = "#EBCC2A",
-                                         high = "#F21A00", midpoint = 0) +
-  theme_bw() +
-  xlab('Reciprocity') +
-  ggtitle('Posterior distribution for Reciprocity \nconditional on altX') +
-  labs(color = 'altX \nChange \nStatistics',
-       fill  = 'altX \nChange \nStatistics')
-g1
-g2
-```
-
-
-
-
-```{r}
-#| label: example-bayes-3way
-#| eval: false
-jnb3 <- JNSienaBayes(sbo           = my_multiSiena_result,
-                     theta_1       = 4,
-                     theta_2       = 10,
-                     theta_3       = 9,
-                     theta_int_12  = 21,
-                     theta_int_13  = 22,
-                     theta_int_23  = 11,
-                     theta_int_123 = 23,
-                     theta_1_vals  = seq(-2, 2, length.out = 50),
-                     theta_2_vals  = seq(-2, 2, length.out = 50),
-                     theta_3_vals  = seq(-2, 2, length.out = 50),
-                     thresholds    = c(0.05, 0.95),
-                     burnIn        = 500,
-                     thin          = 2)
+jnk_bayes2 <- JNK_bayes(mod_bayes2, theta_1 = 'x', theta_2 = 'z',
+                        theta_1_vals = seq(-3,3,0.5), 
+                        theta_2_vals = seq(-3,3,0.5))
 ```
 
 ```{r}
-#| label: fig-bayes-3fake
+#| label: fig-jn-bayes2
+#| eval: true
 #| echo: false
+#| cache: true
+#| dependson: "example-2way-bayes"
+#| fig-cap: >
+#|   Johnson--Neyman--Krause plots for the two-way interaction between `x` and
+#|   `z`. Each curve represents a conditional posterior distribution of the
+#|   focal effect at a given value of the moderator.
+#| fig-subcap:
+#|   - "Conditional effect of `x` as a function of the moderator `z`."
+#|   - "Conditional effect of `z` as a function of the moderator `x`."
+#| layout-ncol: 2
+#| fig-width: 4
+#| fig-height: 3.5
+jnk_bayes2$x_plot
+jnk_bayes2$x_plot
+```
+
+Three-way plots in turn return heatmaps of the posterior mean and Bayesian $p$-value.
+
+```{r}
+#| label: example-3way-bayes
 #| eval: true
 #| cache: true
-#| fig-cap: >
-#|   Figures for Bayesian 3-way interactions
-#| fig-subcap:
-#|   "Mean posterior densities for the effect of ego's self-monitoring on tie
-#|   creation conditional on ego's and alter's creativity. In this example,
-#|   self-monitoring has a positive effect on tie creation when both ego and
-#|   alter have similar levels of creativity."
-#| layout: [[1]]
-#| fig-width: 4.5
-#| fig-height: 3
-set.seed(1402)
-library(ggplot2)
-library(ggpattern)
+#| dependson: "example-2way-lm"
 
-dat <- data.frame(x = rnorm(100),
-                  z = rnorm(100),
-                  w = rnorm(100))
-dat$y = dat$x + 0.5 * dat$z + -1 * dat$w + 0.5 * dat$x * 
-  dat$z * dat$w + rnorm(100,sd = 4)
-
-mod33 <- lm(y ~ x * z * w, data = dat)
-
-set.seed(1402)
-theta <- mvtnorm::rmvnorm(1000, 
-                          coefficients(mod33)[2:8],
-                          vcov(mod33)[2:8,2:8])
-
-theta_1_vals <- seq(-2,2,length.out = 50)
-theta_2_vals <- seq(-2,2,length.out = 50)
-theta_3_vals <- seq(-2,2,length.out = 50)
-
-theta_1n <- 'egoX-monitoring'
-theta_2n <- 'altX-creativity'
-theta_3n <- 'egoX-creativity'
-
-thresholds <- c(0.05, 0.95)
-
-nt <- nrow(theta)
-n1 <- nt * length(theta_2_vals) * length(theta_3_vals)
-
-grid <- expand.grid(mod1Val = theta_2_vals, mod2Val = theta_3_vals)
-
-thetaX_matrix <- outer(rep(1, nt), rep(1, nrow(grid))) 
-thetaX_matrix <- sapply(1:nrow(grid), function(k) {
-  theta[,1] + grid$mod1Val[k] * theta[,4] +
-    grid$mod2Val[k] * theta[,5] +
-    grid$mod1Val[k] * grid$mod2Val[k] * theta[,7]
-})
-
-t1d <- data.frame(
-  mod1      = rep(theta_2n, nrow(grid)),
-  mod1Val   = rep(grid$mod1Val, each = nt),
-  mod2      = rep(theta_3n, nrow(grid)),
-  mod2Val   = rep(grid$mod2Val, each = nt),
-  parameter = as.vector(thetaX_matrix)
-)  |>
-  dplyr::summarize(thetaPostMean = mean(parameter),
-                   thetaPostSD = sd(parameter),
-                   bayes_p = sum(parameter > 0) / length(parameter),
-                   thetaPost2.5    = quantile(parameter,0.025),
-                   thetaPost97.5   = quantile(parameter,0.975),
-                   .by = c(mod1Val,mod2Val)
-  )
+mod_bayes3 <- MCMCregress(y ~ x * z * w, data = dat,
+                          burnin = 1000, mcmc = 10000, thin = 1,
+                          verbose = 0)
 
 
-t1d <- cbind(data.frame(theta = rep(theta_1n,nrow(t1d)),
-                        mod1  = rep(theta_2n,nrow(t1d)),
-                        mod2  = rep(theta_3n,nrow(t1d))),
-             t1d)
-
-t1d$sig <- t1d$bayes_p <= min(thresholds) |
-  t1d$bayes_p >= max(thresholds)
-
-t1d$pattern <- ifelse(!t1d$sig, "crosshatch",'none')
-
-ns <- c(theta_1n,theta_2n,theta_3n)
-
-color_mid = '#EBCC2A'
-color_low = '#3B9AB2'
-color_high = '#F21A00'
-color_values = 'grey40'
-color_grid = 'black'
-grid_density = 0.01
-grid_spacing = 0.1
-
-pat <- t1d[!t1d$sig,]
-
-plotsMean <- ggplot(t1d, aes(mod1Val, mod2Val)) +
-  geom_tile(aes(fill = thetaPostMean )) +
-  scale_color_identity() +
-  scale_fill_gradient2(low = color_low, 
-                       high = color_high,
-                       mid = color_mid,
-                       midpoint = 0) +
-  geom_tile_pattern(data = pat, aes(pattern = pattern),
-                    pattern_density = grid_density,
-                    pattern_spacing = grid_spacing,
-                    pattern_color = color_grid,
-                    alpha = 0) +
-  theme_bw() +
-  guides(pattern = "none") + 
-  ggtitle(paste0('Average posterior density for ',ns[1])) +
-  xlab(ns[-1][[1]]) +
-  ylab(ns[-1][[2]]) +
-  labs(fill = "Posterior Mean")
-
-plotsP <- ggplot(t1d, aes(mod1Val, mod2Val)) +
-  geom_tile(aes(fill = bayes_p)) +
-  scale_color_identity() +
-  scale_fill_gradient2(low = color_low, 
-                       high = color_high,
-                       mid = color_mid,
-                       midpoint = 0.5) +
-  geom_tile_pattern(data = pat, aes(pattern = pattern),
-                    pattern_density = grid_density,
-                    pattern_spacing = grid_spacing,
-                    pattern_color = color_grid,
-                    alpha = 0) +
-  theme_bw() +
-  guides(pattern = "none") + 
-  ggtitle(paste0('Bayesian p-value for ', ns[1])) +
-  xlab(ns[-1][[1]]) +
-  ylab(ns[-1][[2]]) +
-  labs(fill = expression("Bayesian" ~ italic('p') * "-value"))
-
-plotsMean
+jnk_bayes3 <- JNK_bayes(mod_bayes3, 
+                        theta_1 = 'x', 
+                        theta_2 = 'z',
+                        theta_3 = 'w',
+                        theta_1_vals = seq(-3,3,0.1), 
+                        theta_2_vals = seq(-3,3,0.1), 
+                        theta_3_vals = seq(-3,3,0.1),
+                        thresholds = c(0.05, 0.95))
 ```
 
+```{r}
+#| label: fig-jn-bayes3
+#| eval: true
+#| echo: false
+#| cache: true
+#| dependson: "example-3way-bayes"
+#| fig-cap: >
+#|   Johnson--Neyman--Krause plots for the three-way interaction between `x`, 
+#|   `z`, and `w`. The color gradient of the heatmap shows the value of
+#|    conditional posterior mean of the focal effect. Crosshatch overlays
+#|     indicate cells where the Bayesian $p$-value falls outside the threshold
+#|      (here $p$ < 0.05 or $p$ > 0.95).
+#| fig-subcap:
+#|   - "Conditional posterior means of `w` as a function of the
+#|    moderators `x` and `z`."
+#|   - "Conditional posterior means of `z` as a function of the
+#|    moderator `x`."
+#| layout-ncol: 2
+#| fig-width: 4
+#| fig-height: 3.5
+jnk_bayes3$post_mean_plots$w
+jnk_bayes3$bayes_p_plots$w
+```
+
+
+
+## Stochastic Actor-Oriented Models {#sec-SAOM}
+
+Interactions in SAOMs, estimated by **RSiena**'s `siena()` (formerly 
+`siena07()`), between network statistics and actor attributes are common yet 
+difficult to interpret [@Snijders26]. Introducing SAOMs is out of the scope for 
+this package introduction. If you wish to learn more about them, see for 
+instance @Snijder2017. The same `JNK_freq()` function handles `sienaFit`
+objects, using integer indices referencing the position of each effect in the
+**RSiena** effects object^[While each effect in **RSiena** is named, within a
+given model, effects are not necessarily identifiable by their name but the same
+name might appear multiple times for different dependent variables or effect
+types, making secure unique indexing by integer much easier for users.]. In 
+`JNK_bayes()` the rate functions are skipped in the indexing!
+The moderator value ranges (`theta_1_vals`, `theta_2_vals`, `theta_3_vals`)
+should reflect the empirical support of the corresponding change statistics.
+
+`JNK_bayes()` automatically detects whether each required parameter has been
+estimated as a fixed effect ($\eta$; shared across groups) or as a random effect
+($\mu$; group-varying, with a hyper-parameter), and extracts the appropriate
+posterior draws. When `hyper_only = FALSE` and at least one of the involved 
+parameters is
+randomly varying between groups, `JNK_bayes()` additionally loops over all
+$G$ groups and produces group-specific plots and tables, returned under the key
+`random_groups_effects`. This is useful for assessing heterogeneity of
+interaction effects across networks. It is strongly recommended to use `save = 
+TRUE` when running `hyper_only = FALSE` so that all plots are directly created 
+and saved. While this extends run-time, it will make it much easier to inspect 
+the figures.
 
 ## Graphical Output and Customisation {#sec-graphics}
 
@@ -848,14 +656,16 @@ tbl
 
 **int3ract** provides a unified interface for the Johnson--Neyman technique
 and its three-way extension across a broad class of frequentist and Bayesian
-models. By exposing the core computation in a single model-agnostic function,
-`JNK_int()`, the package invites adoption beyond the two model classes for
-which dedicated wrappers currently exist. Future development plans include:
+models. The two exported functions---`JNK_freq()` for frequentist models and
+`JNK_bayes()` for Bayesian models---auto-detect the input class and handle
+extraction internally, while remaining fully usable with raw coefficient
+vectors, covariance matrices, or posterior-draw matrices for models not
+covered by the built-in extractors. Native support for **lme4** mixed-effects
+models includes per-group Johnson--Neyman plots when interaction terms are
+random. Future development plans include:
 
-1. A wrapper for `merMod` objects from **lme4** to allow for randomly varying
-interactions.
-2. A consideration for FDR-correction.
-3. A general Bayesian application
+1. A consideration for FDR-correction.
+2. Additional Bayesian model classes beyond **multiSiena**.
 
 Researchers are encouraged to report not only the JN boundaries but also the
 full plots as supplementary material, in keeping with calls for more
