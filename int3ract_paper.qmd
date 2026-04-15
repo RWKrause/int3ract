@@ -99,7 +99,7 @@ contribution of **int3ract** is threefold.
 The remainder of the paper is organised as follows. @sec-background reviews
 the statistical background of the JN technique and its three-way extension.
 @sec-package describes the package architecture. @sec-freq and @sec-bayes
-illustrate the frequentist and Bayesian workflows with worked examples. @sec-SAOM discussed the application to Stochastic Actor-Oriented Models (SAOMs) estimated with **RSiena** and **multiSiena**. @sec-graphics discusses graphical customisation. @sec-conc concludes.
+illustrate the frequentist and Bayesian workflows with worked examples. @sec-SAOM introduces the application to Stochastic Actor-Oriented Models (SAOMs) estimated with **RSiena** and **multiSiena**. @sec-graphics discusses graphical customisation. @sec-conc concludes.
 
 ## Statistical Background {#sec-background}
 
@@ -470,7 +470,7 @@ jnk_bayes2 <- JNK_bayes(mod_bayes2, theta_1 = 'x', theta_2 = 'z',
 #| fig-width: 4
 #| fig-height: 3.5
 jnk_bayes2$x_plot
-jnk_bayes2$x_plot
+jnk_bayes2$z_plot
 ```
 
 Three-way plots in turn return heatmaps of the posterior mean and Bayesian $p$-value.
@@ -527,8 +527,12 @@ jnk_bayes3$bayes_p_plots$w
 Interactions in SAOMs, estimated by **RSiena**'s `siena()` (formerly 
 `siena07()`), between network statistics and actor attributes are common yet 
 difficult to interpret [@Snijders26]. Introducing SAOMs is out of the scope for 
-this package introduction. If you wish to learn more about them, see for 
-instance @Snijder2017. The same `JNK_freq()` function handles `sienaFit`
+this paper. If you wish to learn more about them, see for 
+instance @Snijders2017. In short, SAOMs are models for network evolution, 
+designed to identify the structural and covariate drivers that lead to the 
+creation, dissolution, and maintenance of connections in networks.
+
+The same `JNK_freq()` function handles `sienaFit`
 objects, using integer indices referencing the position of each effect in the
 **RSiena** effects object^[While each effect in **RSiena** is named, within a
 given model, effects are not necessarily identifiable by their name but the same
@@ -605,10 +609,10 @@ params <- data.frame(
     "Within-cell text colour (heatmaps, \u2264 7 values)",
     "If TRUE, crosshatch marks the non-significant region"
   ),
-  Default = c("'seagreen3'", "'chocolate'", "'black'",
-              "'#F05039'",  "'#EBCC2A'",     "'#000066'",
-              "'black'",    "0.01",         "0.1",
-              "'grey40'",   "TRUE"),
+  Default = c("`seagreen3'", "`chocolate'", "`black'",
+              "`#F05039'",  "`#EBCC2A'",     "`#000066'",
+              "`black'",    "0.01",         "0.1",
+              "`grey40'",   "TRUE"),
   stringsAsFactors = FALSE
 )
 
@@ -669,11 +673,10 @@ random. Future development plans include:
 
 Researchers are encouraged to report not only the JN boundaries but also the
 full plots as supplementary material, in keeping with calls for more
-transparent and complete reporting of interaction effects [@Simonsohn2020].
-
-## Dependencies
-To give due credit, next to the already listed packages, **int3ract** also
-depends on **scales**, **tidyr**, and **tibble** [@scales; @tidy; @tibble].
+transparent and complete reporting of interaction effects^[To give due credit,
+next to the already listed packages, **int3ract** also depends on **scales**,
+**tidyr**, and **tibble** [@scales; @tidy; @tibble]. This paper was written 
+using **gt**, **lme4**, **MCMCpack**, and of coruse **quarto** using **tinytex** [@gt; @lme4; @quarto]] [@Simonsohn2020].
 
 ## References {.unnumbered}
 

@@ -10,7 +10,7 @@ Authors@R: c(
       role = c("aut", "cre")
     )
   )
-Description: This package contains functions to provide two- and three-way Johnson-Neyman plots.
+Description: This package contains functions to provide two- and three-way Johnson-Neyman(Krause) plots for easier interpretation of interactions. It extends the classic frame work to Bayesian models and three-way interactions. Further, the functions have dedicated routines for classic lm/glm models, as well as lme4 models and RSiena results. However, the functions can also be used model agnostic and thus extend the availability of JN(K)-plots beyond what is currently available in R.
 License: GPL-3.0
 Encoding: UTF-8
 LazyData: true
