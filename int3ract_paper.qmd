@@ -2,16 +2,11 @@
 title: "**int3ract**: Johnson--Neyman Technique and Its Three-Way Extension for Frequentist and Bayesian Models in R"
 output-dir: docs
 format:
-  pdf:
-    keep-tex: true
-    number-sections: true
-    fig-pos: "H"
   html:
     toc: true
     output-file: index.html
     number-sections: true
     embed-resources: true
-    fig-pos: "H"
 author:
   - name: "Robert W. Krause"
     email: "robert.w.krause@mailbox.org"
@@ -610,7 +605,7 @@ params <- data.frame(
     "If TRUE, crosshatch marks the non-significant region"
   ),
   Default = c("`seagreen3'", "`chocolate'", "`black'",
-              "`#F05039'",  "`#EBCC2A'",     "`#000066'",
+              "`#3B9AB2'",  "`#EBCC2A'",     "`#F21A00'",
               "`black'",    "0.01",         "0.1",
               "`grey40'",   "TRUE"),
   stringsAsFactors = FALSE

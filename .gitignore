@@ -47,3 +47,20 @@ po/*~
 
 # RStudio Connect folder
 rsconnect/
+
+
+^.*\.Rproj$
+^\.Rproj\.user$
+^\.github$
+^\.git$
+^\.gitignore$
+^README\.Rmd$
+^README-.*\.png$
+^cran-comments\.md$
+^doc$
+^docs$
+^_pkgdown\.yml$
+^pkgdown$
+^LICENSE\.md$
+^\.travis\.yml$
+^codecov\.yml$
