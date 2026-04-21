@@ -1,4 +1,4 @@
-# int3ract 1.0.0
+# int3ract 1.0.1
 
 * Initial CRAN submission.
 * Implements the Johnson–Neyman (JN) technique for two-way

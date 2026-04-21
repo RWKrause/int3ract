@@ -1,7 +1,7 @@
 Package: int3ract
 Type: Package
 Title: Plotting two- and three-way interactions
-Version: 1.0.0
+Version: 1.0.1
 Date: 2026-04-07
 Authors@R: c(
     person(
