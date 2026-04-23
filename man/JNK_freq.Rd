@@ -45,7 +45,7 @@ JNK_freq(
 \code{lmerMod}, \code{glmerMod}) or \code{NULL} when supplying
 \code{covar}/\code{coefs} directly.}
 
-\item{theta_1}{character or numeric; name (lm/glm/lme4) or index (sienaFit)
+\item{theta_1}{character or numeric; name (lm/glm/lmerMod/glmerMod) or index (sienaFit)
 of the first variable.}
 
 \item{theta_2}{character or numeric; second variable.}
@@ -53,7 +53,7 @@ of the first variable.}
 \item{theta_3}{character or numeric; third variable. Default NULL (two-way).}
 
 \item{theta_int_12}{numeric; index of the theta_1:theta_2 interaction
-(sienaFit / generic only). For lm/glm/lme4 inputs the interaction name is
+(sienaFit / generic only). For m/glm/lmerMod/glmerMod inputs the interaction name is
 resolved automatically.}
 
 \item{theta_int_13}{numeric; index of the theta_1:theta_3 interaction.
@@ -66,7 +66,7 @@ Default NULL.}
 Default NULL.}
 
 \item{theta_1_vals}{numeric; evaluation range for theta_1.
-Auto-derived from model data for lm/glm/lme4 if NULL.}
+Auto-derived from model data for lm/glm/lmerMod/glmerMod if NULL.}
 
 \item{theta_2_vals}{numeric; evaluation range for theta_2.}
 
@@ -81,10 +81,10 @@ Required only when \code{x} is NULL.}
 \item{name}{character; variable names.
 Required only when \code{x} is NULL.}
 
-\item{group_var}{character; (lme4 only) grouping variable for random
+\item{group_var}{character; ('lme4' only) grouping variable for random
 effects. Defaults to the first grouping factor.}
 
-\item{fixed_only}{logical; (lme4 only) produce only fixed-effects plots?
+\item{fixed_only}{logical; ('lme4' only) produce only fixed-effects plots?
 If FALSE, per-group plots are produced for groups with random interaction
 terms. Default TRUE.}
 
@@ -132,16 +132,16 @@ Default TRUE.}
 A list containing tables and plots. For two-way interactions:
   \code{param_table} and \code{plots}. For three-way: \code{thetas},
   \code{standard_errors}, \code{p_values}, \code{significance}, and
-  \code{plots}. When \code{fixed_only = FALSE} (lme4), returns a list
+  \code{plots}. When \code{fixed_only = FALSE} ('lme4'), returns a list
   with \code{fixed} and \code{random_groups} elements.
 }
 \description{
 Unified function that accepts \code{lm}, \code{glm}, \code{sienaFit}
-(RSiena), or \code{lmerMod}/\code{glmerMod} (lme4) objects, or raw
+('RSiena'), or \code{lmerMod}/\code{glmerMod} ('lme4') objects, or raw
 coefficient vectors and covariance matrices.
 }
 \examples{
-\dontrun{
+\donttest{
 # --- lm / glm ---
 dat <- data.frame(y = rnorm(100), x = rnorm(100),
                   z = rnorm(100), w = rnorm(100))

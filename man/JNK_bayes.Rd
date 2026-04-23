@@ -34,9 +34,9 @@ JNK_bayes(
 )
 }
 \arguments{
-\item{x}{matrix or multiSiena; posterior draws or sienaBayes output.
+\item{x}{matrix or 'multiSiena'; posterior draws or sienaBayes() output.
 If a matrix, columns should be named or referenced by index.
-If a multiSiena object, parameters are referenced by their position
+If a 'multiSiena' object, parameters are referenced by their position
 in the (rate-excluded) effects object.}
 
 \item{theta_1}{character or numeric; name/index of the first variable
@@ -70,7 +70,7 @@ multiplied with.}
 multiplied with. Default NULL.}
 
 \item{burn_in}{numeric; burn-in iterations to remove.
-For multiSiena input defaults to \code{max(x$nwarm, 1)};
+For 'multiSiena' input defaults to \code{max(x$nwarm, 1)};
 for matrix input defaults to 0.}
 
 \item{thin}{numeric; thinning interval. Default 1.}
@@ -78,7 +78,7 @@ for matrix input defaults to 0.}
 \item{thresholds}{numeric; threshold for significance hashing.
 Default \code{c(0.49999999999999999, 0.5)}.}
 
-\item{hyper_only}{logical; (multiSiena only) use only the
+\item{hyper_only}{logical; ('multiSiena' only) use only the
 hyper-parameter, or also produce group-level plots? Default TRUE.}
 
 \item{round_res}{numeric; rounding digits. Default 3.}

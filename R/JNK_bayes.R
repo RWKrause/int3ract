@@ -4,9 +4,9 @@
 #' columns = parameters) or a \code{multiSiena} object produced by
 #' \code{sienaBayes()}.
 #'
-#' @param x matrix or multiSiena; posterior draws or sienaBayes output.
+#' @param x matrix or 'multiSiena'; posterior draws or sienaBayes() output.
 #'   If a matrix, columns should be named or referenced by index.
-#'   If a multiSiena object, parameters are referenced by their position
+#'   If a 'multiSiena' object, parameters are referenced by their position
 #'   in the (rate-excluded) effects object.
 #' @param theta_1 character or numeric; name/index of the first variable
 #'   involved in the interaction.
@@ -29,12 +29,12 @@
 #' @param theta_3_vals numeric; range of the statistic theta_3 is
 #'   multiplied with. Default NULL.
 #' @param burn_in numeric; burn-in iterations to remove.
-#'   For multiSiena input defaults to \code{max(x$nwarm, 1)};
+#'   For 'multiSiena' input defaults to \code{max(x$nwarm, 1)};
 #'   for matrix input defaults to 0.
 #' @param thin numeric; thinning interval. Default 1.
 #' @param thresholds numeric; threshold for significance hashing.
 #'   Default \code{c(0.49999999999999999, 0.5)}.
-#' @param hyper_only logical; (multiSiena only) use only the
+#' @param hyper_only logical; ('multiSiena' only) use only the
 #'   hyper-parameter, or also produce group-level plots? Default TRUE.
 #' @param round_res numeric; rounding digits. Default 3.
 #' @param noTitle character; optional plot title.
