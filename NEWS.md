@@ -1,7 +1,7 @@
-# int3ract 1.0.1
+# int3ract 1.0.2
 
 * Initial CRAN submission.
-* Implements the Johnson–Neyman (JN) technique for two-way
+* Implements the Johnson–Neyman (JN - Johnson and Fay (1950) <doi:10.1007/BF02288864>) technique for two-way
 interactions and its three-way extension (JNK technique).
 * `JNK_freq()` supports `lm`, `glm`, `lme4::lmer`/`glmer`, and
 `RSiena::siena` objects, as well as raw coefficient vectors and
