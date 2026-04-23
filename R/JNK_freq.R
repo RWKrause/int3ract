@@ -74,7 +74,7 @@
 #' @export
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' # --- lm / glm ---
 #' dat <- data.frame(y = rnorm(100), x = rnorm(100),
 #'                   z = rnorm(100), w = rnorm(100))
