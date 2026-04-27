@@ -23,3 +23,5 @@ Imports:
   scales,
   lme4
 RoxygenNote: 7.3.3
+URL: https://github.com/RWKrause/int3ract
+BugReports: https://github.com/RWKrause/int3ract/issues
