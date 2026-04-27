@@ -1,7 +1,7 @@
 Package: int3ract
 Type: Package
-Title: Plotting Two- and Three-way Interactions
-Version: 1.0.2
+Title: Plotting Two- and Three-Way Interactions
+Version: 1.0.4
 Date: 2026-04-07
 Authors@R: c(
     person(
@@ -10,7 +10,7 @@ Authors@R: c(
       role = c("aut", "cre")
     )
   )
-Description: Provides two- and three-way Johnson-Neyman-(Krause) plots for easier interpretation of interactions. It extends the classic frame work of Johnson and Neyman (1936) and Johnson and Fay (1950) <doi:10.1007/BF02288864> to Bayesian models and three-way interactions. The functions have dedicated routines for classic lm()/glm() models, as well as 'lme4' models and 'RSiena' results. However, the package can also be used model agnostic and thus extends the availability of JN(K)-plots beyond what is currently available in R.
+Description: Provides two- and three-way Johnson-Neyman-(Krause) plots for easier interpretation of interactions. It extends the classic frame work of Johnson and Neyman (1936) to Bayesian models and three-way interactions. The functions have dedicated routines for classic lm()/glm() models, as well as 'lme4' models and 'RSiena' results. However, the package can also be used model agnostic and thus extends the availability of JN(K)-plots beyond what is currently available in R. A detailed introduction can be found in Krause (2026) <doi:10.48550/arXiv.2604.22051 >.
 License: GPL (>= 3)
 Encoding: UTF-8
 LazyData: true

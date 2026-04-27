@@ -1,0 +1,10 @@
+bibentry(
+  bibtype = "Misc",
+  title = "int3ract: Johnson--Neyman Technique and its Three-Way Extension for Frequentist and Bayesian Models in R",
+  author = c(person("Robert W.", "Krause")),
+  year = "2026",
+  eprint= "2604.22051",
+  archivePrefix = "arXiv",
+  primaryClass = "stat.ME",
+  doi = "10.48550/arXiv.2604.22051"
+)
