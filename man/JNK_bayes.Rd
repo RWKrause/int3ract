@@ -118,20 +118,22 @@ columns = parameters) or a \code{multiSiena} object produced by
 }
 \examples{
 \donttest{
-library(MCMCpack)
-set.seed(1402)
-dat <- data.frame(x = rnorm(100),
-                  z = rnorm(100))
+if (requireNamespace("MCMCpack", quietly = TRUE)) {
+  library(MCMCpack)
+  set.seed(1402)
+  dat <- data.frame(x = rnorm(100),
+                    z = rnorm(100))
 
-dat$y = dat$x + 0.5 * dat$x * dat$z - 0.5 * dat$z + rnorm(100,sd = 4)
-mod_bayes2 <- MCMCregress(y ~ x * z, data = dat,
-                          burnin = 1000, mcmc = 10000, thin = 1,
-                          verbose = 0)
+  dat$y = dat$x + 0.5 * dat$x * dat$z - 0.5 * dat$z + rnorm(100,sd = 4)
+  mod_bayes2 <- MCMCregress(y ~ x * z, data = dat,
+                            burnin = 1000, mcmc = 10000, thin = 1,
+                            verbose = 0)
 
 
-jnk_bayes2 <- JNK_bayes(mod_bayes2, theta_1 = 'x', theta_2 = 'z',
-                        theta_1_vals = seq(-3,3,0.5), 
-                        theta_2_vals = seq(-3,3,0.5))
+  jnk_bayes2 <- JNK_bayes(mod_bayes2, theta_1 = 'x', theta_2 = 'z',
+                          theta_1_vals = seq(-3,3,0.5), 
+                          theta_2_vals = seq(-3,3,0.5))
+ }
 }
  
 
