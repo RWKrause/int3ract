@@ -49,8 +49,32 @@
 #' @param folder character; save folder. Default NULL
 #'   ('int3ract JNplots' for multiSiena).
 #'
-#' @returns list of plots.
+#' @returns A list containing tables and plots. For two-way interactions:
+#'   \code{param_table} and \code{plots}. For three-way: \code{thetas},
+#'   \code{standard_errors}, \code{p_values}, \code{significance}, and
+#'   \code{plots}. When \code{hyper_only = FALSE} ('multiSiena'), also returns a
+#'   list of group-level results under \code{random_groups_effects}.
 #' @export
+#'
+#' @examples
+#' \donttest{
+#' library(MCMCpack)
+#' set.seed(1402)
+#' dat <- data.frame(x = rnorm(100),
+#'                   z = rnorm(100))
+#' 
+#' dat$y = dat$x + 0.5 * dat$x * dat$z - 0.5 * dat$z + rnorm(100,sd = 4)
+#' mod_bayes2 <- MCMCregress(y ~ x * z, data = dat,
+#'                           burnin = 1000, mcmc = 10000, thin = 1,
+#'                           verbose = 0)
+#' 
+#' 
+#' jnk_bayes2 <- JNK_bayes(mod_bayes2, theta_1 = 'x', theta_2 = 'z',
+#'                         theta_1_vals = seq(-3,3,0.5), 
+#'                         theta_2_vals = seq(-3,3,0.5))
+#'}
+#'  
+#' 
 #'
 JNK_bayes <- function(x,
                       theta_1,
