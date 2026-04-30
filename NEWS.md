@@ -1,7 +1,9 @@
+# int3ract 1.0.7
+* Fixing stray files in package for CRAN submission
 # int3ract 1.0.6
-
+* Fixing save directory for CRAN submission
 # int3ract 1.0.5
-
+* Fixing typos for CRAN submission
 # int3ract 1.0.2
 
 * Initial CRAN submission.

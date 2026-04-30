@@ -9,7 +9,8 @@
 #'   If a 'multiSiena' object, parameters are referenced by their position
 #'   in the (rate-excluded) effects object.
 #' @param theta_1 character or numeric; name/index of the first variable
-#'   involved in the interaction. (For \code{multiSiena} input, this is the #' #' position of the effect in the effects object ignoring rates -- \code{x[x$type != 'rate',]}).
+#'   involved in the interaction. (For \code{multiSiena} input, this is the 
+#'   position of the effect in the effects object ignoring rates -- \code{x[x$type != 'rate', ]}).
 #' @param theta_2 character or numeric; name/index of the second variable. 
 #' @param theta_3 character or numeric; name/index of the third variable.
 #'   Default NULL (two-way interaction).
@@ -95,9 +96,9 @@
 #'   mod_bayes2 <- MCMCpack::MCMCregress(y ~ x * z, data = dat,
 #'                                       burnin = 1000, mcmc = 10000,
 #'                                       thin = 1, verbose = 0)
-#'   JNK_bayes(mod_bayes2, theta_1 = 'x', theta_2 = 'z',
-#'             theta_1_vals = seq(-3, 3, 0.5),
-#'             theta_2_vals = seq(-3, 3, 0.5))
+#'   jnk_bayes2_e <- JNK_bayes(mod_bayes2, theta_1 = 'x', theta_2 = 'z',
+#'                             theta_1_vals = seq(-3, 3, 0.5),
+#'                             theta_2_vals = seq(-3, 3, 0.5))
 #' }
 #' }
 #'
