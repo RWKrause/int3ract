@@ -1,5 +1,3 @@
-# int3ract 1.0.8
-
 # int3ract 1.0.7
 * Fixing stray files in package for CRAN submission
 # int3ract 1.0.6
