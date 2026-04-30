@@ -150,7 +150,7 @@ dat <- data.frame(y = rnorm(100), x = rnorm(100),
 res <- lm(y ~ x * z * w, dat)
 
 x2 <- JNK_freq(res, theta_1 = 'x', theta_2 = 'z',
-               range_size = 100)
+               range_size = 50)
 x2$plots$z
 
 # --- three-way lm (small grid for speed) ---
@@ -166,5 +166,5 @@ JNK_freq(covar = vcov(res)[c('x','z','x:z'), c('x','z','x:z')],
          theta_2 = 'z',
          theta_1_vals = c(-3, 3),
          theta_2_vals = c(-3, 3),
-         range_size = 100)
+         range_size = 50)
 }
