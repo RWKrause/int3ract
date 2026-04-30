@@ -40,7 +40,7 @@ If a 'multiSiena' object, parameters are referenced by their position
 in the (rate-excluded) effects object.}
 
 \item{theta_1}{character or numeric; name/index of the first variable
-involved in the interaction.}
+involved in the interaction. (For \code{multiSiena} input, this is the #' #' position of the effect in the effects object ignoring rates -- \code{x[x$type != 'rate',]}).}
 
 \item{theta_2}{character or numeric; name/index of the second variable.}
 
@@ -49,7 +49,7 @@ Default NULL (two-way interaction).}
 
 \item{theta_int_12}{numeric; index of the interaction between theta_1
 and theta_2. Not needed when theta_1 etc. are character names
-(matrix input only).}
+(matrix input and \code{multiSiena} only).}
 
 \item{theta_int_13}{numeric; index of the theta_1:theta_3 interaction.
 Default NULL.}
@@ -70,7 +70,7 @@ multiplied with.}
 multiplied with. Default NULL.}
 
 \item{burn_in}{numeric; burn-in iterations to remove.
-For 'multiSiena' input defaults to \code{max(x$nwarm, 1)};
+For \code{multiSiena} input defaults to \code{max(x$nwarm, 1)};
 for matrix input defaults to 0.}
 
 \item{thin}{numeric; thinning interval. Default 1.}
@@ -78,7 +78,7 @@ for matrix input defaults to 0.}
 \item{thresholds}{numeric; threshold for significance hashing.
 Default \code{c(0.49999999999999999, 0.5)}.}
 
-\item{hyper_only}{logical; ('multiSiena' only) use only the
+\item{hyper_only}{logical; (\code{multiSiena} only) use only the
 hyper-parameter, or also produce group-level plots? Default TRUE.}
 
 \item{round_res}{numeric; rounding digits. Default 3.}
@@ -101,8 +101,10 @@ hyper-parameter, or also produce group-level plots? Default TRUE.}
 
 \item{save}{logical; save plots with ggsave()? Default FALSE.}
 
-\item{folder}{character; save folder. Default NULL
-('int3ract JNplots' for multiSiena).}
+\item{folder}{character; save folder. Default NULL, which writes into a
+session-temporary directory
+(\code{file.path(tempdir(), 'int3ract JNKplots')}). Set explicitly to
+write elsewhere.}
 }
 \value{
 A list containing tables and plots. For two-way interactions:
@@ -117,25 +119,46 @@ columns = parameters) or a \code{multiSiena} object produced by
 \code{sienaBayes()}.
 }
 \examples{
+# --- two-way: raw posterior matrix (fast, no extra packages) ---
+set.seed(1)
+n_iter <- 500
+post2 <- cbind(x     = rnorm(n_iter,  0.5, 0.2),
+               z     = rnorm(n_iter, -0.3, 0.2),
+               `x:z` = rnorm(n_iter,  0.4, 0.2))
+
+jnk_bayes2 <- JNK_bayes(post2,
+                        theta_1 = 'x', theta_2 = 'z',
+                        theta_1_vals = seq(-2, 2, 1),
+                        theta_2_vals = seq(-2, 2, 1))
+
+# --- three-way: raw posterior matrix ---
+post3 <- cbind(x       = rnorm(n_iter,  0.5, 0.2),
+               z       = rnorm(n_iter, -0.3, 0.2),
+               w       = rnorm(n_iter,  0.2, 0.2),
+               `x:z`   = rnorm(n_iter,  0.4, 0.2),
+               `x:w`   = rnorm(n_iter,  0.1, 0.2),
+               `z:w`   = rnorm(n_iter, -0.1, 0.2),
+               `x:z:w` = rnorm(n_iter,  0.2, 0.2))
+
+jnk_bayes3 <- JNK_bayes(post3,
+                        theta_1 = 'x', theta_2 = 'z', theta_3 = 'w',
+                        theta_1_vals = seq(-2, 2, 1),
+                        theta_2_vals = seq(-2, 2, 1),
+                        theta_3_vals = seq(-2, 2, 1))
+
+# --- two-way: integration with MCMCpack (only if installed) ---
 \donttest{
 if (requireNamespace("MCMCpack", quietly = TRUE)) {
-  library(MCMCpack)
   set.seed(1402)
-  dat <- data.frame(x = rnorm(100),
-                    z = rnorm(100))
-
-  dat$y = dat$x + 0.5 * dat$x * dat$z - 0.5 * dat$z + rnorm(100,sd = 4)
-  mod_bayes2 <- MCMCregress(y ~ x * z, data = dat,
-                            burnin = 1000, mcmc = 10000, thin = 1,
-                            verbose = 0)
-
-
-  jnk_bayes2 <- JNK_bayes(mod_bayes2, theta_1 = 'x', theta_2 = 'z',
-                          theta_1_vals = seq(-3,3,0.5), 
-                          theta_2_vals = seq(-3,3,0.5))
- }
+  dat   <- data.frame(x = rnorm(100), z = rnorm(100))
+  dat$y <- dat$x + 0.5 * dat$x * dat$z - 0.5 * dat$z + rnorm(100, sd = 4)
+  mod_bayes2 <- MCMCpack::MCMCregress(y ~ x * z, data = dat,
+                                      burnin = 1000, mcmc = 10000,
+                                      thin = 1, verbose = 0)
+  JNK_bayes(mod_bayes2, theta_1 = 'x', theta_2 = 'z',
+            theta_1_vals = seq(-3, 3, 0.5),
+            theta_2_vals = seq(-3, 3, 0.5))
 }
- 
-
+}
 
 }

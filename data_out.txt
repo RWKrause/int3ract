@@ -1,0 +1,156 @@
+
+
+-----------------------------------
+New Analysis started.
+Date and time: 30/04/2026 11:11:49
+New results follow.
+-----------------------------------
+
+RSiena version 1.6.6 (20 Apr 26)
+
+
+@1
+Estimation by stochastic approximation algorithm.
+=================================================
+
+Current random number seed is 531.
+Effects object used: effects 
+Model Type:
+ Standard actor-oriented model 
+Estimation method: unconditional moment estimation
+.
+
+Time duration for simulations in each period is 1.0.
+Standard errors are estimated with the likelihood ratio method.
+Dolby method (regression on scores) is used.
+Initial value of gain parameter is  0.2828427.
+Reduction factor for gain parameter is  0.5000000.
+Number of subphases in Phase 2 is 2.
+
+Initial parameter values are 
+  1. rate:  constant net rate (period 1)                    2.9048
+  2. rate:  constant net rate (period 3)                    1.4762
+  3. rate:  constant net rate (period 5)                    3.3810
+  4. rate:  constant net rate (period 7)                    3.3810
+  5. rate:  constant net rate (period 9)                    2.9048
+  6. rate:  constant net rate (period 11)                   3.3810
+  7. rate:  constant net rate (period 13)                   1.4762
+  8. rate:  constant net rate (period 15)                   3.3810
+  9. eval:  outdegree (density)                             0.0000
+ 10. eval:  reciprocity                                     0.0000
+ 11. eval:  transitive triplets                             0.0000
+ 12. eval:  transitive recipr. triplets                     0.0000
+ 13. eval:  num ego                                         0.0000
+ 14. eval:  num ego x reciprocity                           0.0000
+ 15. eval:  num ego x transitive triplets                   0.0000
+
+
+Values of target statistics are
+  1. Amount of network change in period 1                                 6.0000
+  2. Amount of network change in period 3                                 3.0000
+  3. Amount of network change in period 5                                 7.0000
+  4. Amount of network change in period 7                                 7.0000
+  5. Amount of network change in period 9                                 6.0000
+  6. Amount of network change in period 11                                7.0000
+  7. Amount of network change in period 13                                3.0000
+  8. Amount of network change in period 15                                7.0000
+  9. Number of ties                                                      32.0000
+ 10. Number of reciprocated ties                                         20.0000
+ 11. Number of transitive triplets                                        0.0000
+ 12. Number of transitive recipr. triplets                                0.0000
+ 13. Sum outdegrees x num                                               -14.0000
+ 14. num ego x reciprocity                                              -22.0000
+ 15. num ego x transitive triplets                                        0.0000
+These were calculated from the data.
+
+ 15 parameters, 15 statistics
+
+Estimation of derivatives by the LR method (type 1).
+
+
+@2
+End of stochastic approximation algorithm, phase 3.
+---------------------------------------------------
+
+Total of 1002 iterations.
+Parameter estimates based on 498 iterations,
+convergence diagnostics, covariance and derivative matrices based on 504 iterations.
+
+Information for convergence diagnosis.
+Averages, standard deviations, and t-ratios for deviations from targets:
+  1.   0.2500   1.9581   0.1277 
+  2.  -0.0377   1.2550  -0.0300 
+  3.   0.0774   2.1037   0.0368 
+  4.  -0.1111   1.9929  -0.0558 
+  5.  -0.0139   1.7907  -0.0078 
+  6.  -0.5020   1.7656  -0.2843 
+  7.   0.0595   1.4614   0.0407 
+  8.  -0.6706   1.5467  -0.4336 
+  9.   0.0873   4.9168   0.0178 
+ 10.   0.3651   4.8804   0.0748 
+ 11.   0.3115   0.7409   0.4205 
+ 12.   0.1131   0.3901   0.2899 
+ 13.   0.2302  11.9860   0.0192 
+ 14.   0.2222  11.9671   0.0186 
+ 15.   0.0565   1.6099   0.0351 
+
+Good convergence is indicated by the t-ratios being close to zero.
+
+Overall maximum convergence ratio =  0.7616 .
+One or more of the t-statistics are rather large.
+
+
+
+@2
+Estimation Results.
+-------------------
+
+Regular end of estimation algorithm.
+Total of 1002 iteration steps.
+
+
+@3
+Estimates and standard errors
+                             
+ 1. rate:  constant net rate (period 1)                            6.7264  (   4.6849)
+ 2. rate:  constant net rate (period 3)                            1.1127  (   0.7643)
+ 3. rate:  constant net rate (period 5)                           14.2206  (  34.8391)
+ 4. rate:  constant net rate (period 7)                           18.6313  (  32.2088)
+ 5. rate:  constant net rate (period 9)                            5.4252  (   9.8357)
+ 6. rate:  constant net rate (period 11)                          23.0098  (   1.7656)
+ 7. rate:  constant net rate (period 13)                           1.0591  (   0.7571)
+ 8. rate:  constant net rate (period 15)                          32.6714  ( 237.6040)
+ 9. eval:  outdegree (density)                                    -1.7304  (   0.4681)
+10. eval:  reciprocity                                             2.2332  (   1.4994)
+11. eval:  transitive triplets                                    -1.0415  (   7.5758)
+12. eval:  transitive recipr. triplets                            -1.5085  (  22.1076)
+13. eval:  num ego                                                 0.1152  (   0.1956)
+14. eval:  num ego x reciprocity                                  -0.4399  (   0.8691)
+15. eval:  num ego x transitive triplets                          -0.0574  (   1.4398)
+
+
+@3
+Covariance matrices
+                   
+Covariance matrix of estimates (correlations below diagonal):
+    21.948     -0.049    -35.456      4.683      3.631     -0.039     -0.070    -87.847     -0.483      1.285      5.835    -21.244      0.185     -0.085     -0.613
+    -0.014      0.584     -1.189     -2.850     -0.145     -0.154      0.011    -10.486      0.014      0.041      0.678     -2.347     -0.003      0.034      0.060
+    -0.217     -0.045   1213.760    -71.482    -15.093      3.016     -0.158    273.664      7.455    -14.514    -39.204    107.320     -1.725      2.546      2.202
+     0.031     -0.116     -0.064   1037.405     -1.709     -0.050     -1.113   3134.036     -1.458    -15.357    -91.524    293.834      0.765    -10.263     -0.807
+     0.079     -0.019     -0.044     -0.005     96.740     -0.100      0.415     47.891     -0.019      0.615      2.528    -15.034      0.032     -0.050     -1.201
+    -0.005     -0.114      0.049     -0.001     -0.006      3.117     -0.004    -20.985      0.060      0.147      0.043      0.672      0.027      0.052      0.045
+    -0.020      0.019     -0.006     -0.046      0.056     -0.003      0.573    -55.457     -0.011      0.299      1.292     -3.500     -0.021      0.200      0.094
+    -0.079     -0.058      0.033      0.410      0.020     -0.050     -0.308  56455.684     12.360   -302.129  -1396.086   3810.703     14.182   -188.509    -87.007
+    -0.220      0.038      0.457     -0.097     -0.004      0.073     -0.030      0.111      0.219     -0.398     -1.071      2.112     -0.014     -0.008     -0.111
+     0.183      0.036     -0.278     -0.318      0.042      0.056      0.263     -0.848     -0.567      2.248      8.868    -23.243     -0.048      0.968      0.622
+     0.164      0.117     -0.149     -0.375      0.034      0.003      0.225     -0.776     -0.302      0.781     57.393   -147.401     -0.463      4.831      3.228
+    -0.205     -0.139      0.139      0.413     -0.069      0.017     -0.209      0.725      0.204     -0.701     -0.880    488.745      0.630    -11.687      0.019
+     0.202     -0.019     -0.253      0.121      0.017      0.078     -0.144      0.305     -0.151     -0.164     -0.313      0.146      0.038     -0.104     -0.131
+    -0.021      0.051      0.084     -0.367     -0.006      0.034      0.304     -0.913     -0.019      0.743      0.734     -0.608     -0.612      0.755      0.498
+    -0.091      0.055      0.044     -0.017     -0.085      0.018      0.086     -0.254     -0.165      0.288      0.296      0.001     -0.465      0.398      2.073
+
+Derivative matrix of expected statistics X by parameters and
+covariance/correlation matrix of X can be found using
+summary(ans) within R, or by using the 'verbose' option in Siena07.
+ 
+Total computation time 5.78 seconds.
