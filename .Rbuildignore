@@ -1,2 +1,10 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
+^docs$
+^index\.html$
+^int3ract_paper.*$
+^jss-article-rnw$
+^cran-comments\.md$
+^CRAN-SUBMISSION$
+^\.positai$
+^\.claude$

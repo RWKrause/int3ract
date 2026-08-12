@@ -1,8 +1,17 @@
 # =============================================================================
 # Shared utilities
 # =============================================================================
-
+#' @importFrom stats coef model.frame pnorm qnorm quantile sd setNames vcov
+#' @importFrom utils head
+#' @importFrom lme4 fixef ranef
 # ---- used by: JNK_bayes (multiSiena path) ----
+
+
+utils::globalVariables(c(
+  "Parameter Value", "Var1", "Var2", "mod1Val", "mod2Val",
+  "modValue", "mod_vals", "parameter", "pattern",
+  "theta_se", "theta_vals"
+))
 
 .clean_effect_name <- function(n) {
   gsub(':', '', gsub('/', 'o', gsub('\\^', '', n)))

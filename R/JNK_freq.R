@@ -1,18 +1,18 @@
 #' Johnson-Neyman(-Krause) plots for frequentist models
 #'
 #' Unified function that accepts \code{lm}, \code{glm}, \code{sienaFit}
-#' (RSiena), or \code{lmerMod}/\code{glmerMod} (lme4) objects, or raw
+#' ('RSiena'), or \code{lmerMod}/\code{glmerMod} ('lme4') objects, or raw
 #' coefficient vectors and covariance matrices.
 #'
 #' @param x model object (\code{lm}, \code{glm}, \code{sienaFit},
 #'   \code{lmerMod}, \code{glmerMod}) or \code{NULL} when supplying
 #'   \code{covar}/\code{coefs} directly.
-#' @param theta_1 character or numeric; name (lm/glm/lme4) or index (sienaFit)
+#' @param theta_1 character or numeric; name (lm/glm/lmerMod/glmerMod) or index (sienaFit)
 #'   of the first variable.
 #' @param theta_2 character or numeric; second variable.
 #' @param theta_3 character or numeric; third variable. Default NULL (two-way).
 #' @param theta_int_12 numeric; index of the theta_1:theta_2 interaction
-#'   (sienaFit / generic only). For lm/glm/lme4 inputs the interaction name is
+#'   (sienaFit / generic only). For m/glm/lmerMod/glmerMod inputs the interaction name is
 #'   resolved automatically.
 #' @param theta_int_13 numeric; index of the theta_1:theta_3 interaction.
 #'   Default NULL.
@@ -21,7 +21,7 @@
 #' @param theta_int_123 numeric; index of the three-way interaction.
 #'   Default NULL.
 #' @param theta_1_vals numeric; evaluation range for theta_1.
-#'   Auto-derived from model data for lm/glm/lme4 if NULL.
+#'   Auto-derived from model data for lm/glm/lmerMod/glmerMod if NULL.
 #' @param theta_2_vals numeric; evaluation range for theta_2.
 #' @param theta_3_vals numeric; evaluation range for theta_3. Default NULL.
 #' @param covar matrix; covariance matrix of the relevant parameters.
@@ -30,9 +30,9 @@
 #'   Required only when \code{x} is NULL.
 #' @param name character; variable names.
 #'   Required only when \code{x} is NULL.
-#' @param group_var character; (lme4 only) grouping variable for random
+#' @param group_var character; ('lme4' only) grouping variable for random
 #'   effects. Defaults to the first grouping factor.
-#' @param fixed_only logical; (lme4 only) produce only fixed-effects plots?
+#' @param fixed_only logical; ('lme4' only) produce only fixed-effects plots?
 #'   If FALSE, per-group plots are produced for groups with random interaction
 #'   terms. Default TRUE.
 #' @param control_fdr logical; apply Bonferroni-Holm correction? Default FALSE.
@@ -56,13 +56,15 @@
 #' @param crosshatch_non_sig logical; crosshatch non-significant cells?
 #'   Default TRUE.
 #' @param save logical; save plots via ggsave()? Default FALSE.
-#' @param folder character; output folder for saved plots. Default NULL
-#'   ('int3ract JNKplots').
+#' @param folder character; output folder for saved plots. Default NULL,
+#'   which writes into a session-temporary directory
+#'   (\code{file.path(tempdir(), 'int3ract JNKplots')}). Set explicitly to
+#'   write elsewhere.
 #'
 #' @returns A list containing tables and plots. For two-way interactions:
 #'   \code{param_table} and \code{plots}. For three-way: \code{thetas},
 #'   \code{standard_errors}, \code{p_values}, \code{significance}, and
-#'   \code{plots}. When \code{fixed_only = FALSE} (lme4), returns a list
+#'   \code{plots}. When \code{fixed_only = FALSE} ('lme4'), returns a list
 #'   with \code{fixed} and \code{random_groups} elements.
 #'
 #' @import ggplot2
@@ -74,27 +76,28 @@
 #' @export
 #'
 #' @examples
-#' \dontrun{
-#' # --- lm / glm ---
+#' # --- two-way lm ---
+#' set.seed(1)
 #' dat <- data.frame(y = rnorm(100), x = rnorm(100),
 #'                   z = rnorm(100), w = rnorm(100))
 #' res <- lm(y ~ x * z * w, dat)
 #'
-#' x2 <- JNK_freq(res, theta_1 = 'x', theta_2 = 'z')
-#' x2$plots$z
+#' x2 <- JNK_freq(res, theta_1 = 'x', theta_2 = 'z',
+#'                range_size = 50)
 #'
-#' x3 <- JNK_freq(res, theta_1 = 'x', theta_2 = 'z', theta_3 = 'w')
-#' x3$plots$z
+#' # --- three-way lm (small grid for speed) ---
+#' x3 <- JNK_freq(res, theta_1 = 'x', theta_2 = 'z', theta_3 = 'w',
+#'                range_size = 10)
 #'
 #' # --- generic (covariance + coefficients) ---
-#' JNK_freq(covar = vcov(res)[c('x','z','x:z'), c('x','z','x:z')],
-#'          coefs = coef(res)[c('x','z','x:z')],
-#'          name  = c('x', 'z'),
-#'          theta_1 = 'x', 
-#'          theta_2 = 'z',
-#'          theta_1_vals = c(-3, 3), 
-#'          theta_2_vals = c(-3, 3))
-#' }
+#' x2_gen <- JNK_freq(covar = vcov(res)[c('x','z','x:z'), c('x','z','x:z')],
+#'                    coefs = coef(res)[c('x','z','x:z')],
+#'                    name  = c('x', 'z'),
+#'                    theta_1 = 'x',
+#'                    theta_2 = 'z',
+#'                    theta_1_vals = c(-3, 3),
+#'                    theta_2_vals = c(-3, 3),
+#'                    range_size = 50)
 JNK_freq <- function(x = NULL,
                      theta_1,
                      theta_2,
@@ -130,7 +133,7 @@ JNK_freq <- function(x = NULL,
                      folder = NULL) {
 
   threeWay <- !is.null(theta_3)
-  folder   <- folder %||% 'int3ract JNKplots'
+  folder   <- folder %||% file.path(tempdir(), 'int3ract JNKplots')
 
   if (is.null(range_size))
     range_size <- if (threeWay) 50 else 1000

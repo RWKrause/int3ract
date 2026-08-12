@@ -4,18 +4,19 @@
 #' columns = parameters) or a \code{multiSiena} object produced by
 #' \code{sienaBayes()}.
 #'
-#' @param x matrix or multiSiena; posterior draws or sienaBayes output.
+#' @param x matrix or 'multiSiena'; posterior draws or sienaBayes() output.
 #'   If a matrix, columns should be named or referenced by index.
-#'   If a multiSiena object, parameters are referenced by their position
+#'   If a 'multiSiena' object, parameters are referenced by their position
 #'   in the (rate-excluded) effects object.
 #' @param theta_1 character or numeric; name/index of the first variable
-#'   involved in the interaction.
-#' @param theta_2 character or numeric; name/index of the second variable.
+#'   involved in the interaction. (For \code{multiSiena} input, this is the 
+#'   position of the effect in the effects object ignoring rates -- \code{x[x$type != 'rate', ]}).
+#' @param theta_2 character or numeric; name/index of the second variable. 
 #' @param theta_3 character or numeric; name/index of the third variable.
 #'   Default NULL (two-way interaction).
 #' @param theta_int_12 numeric; index of the interaction between theta_1
 #'   and theta_2. Not needed when theta_1 etc. are character names
-#'   (matrix input only).
+#'   (matrix input and \code{multiSiena} only).
 #' @param theta_int_13 numeric; index of the theta_1:theta_3 interaction.
 #'   Default NULL.
 #' @param theta_int_23 numeric; index of the theta_2:theta_3 interaction.
@@ -29,12 +30,12 @@
 #' @param theta_3_vals numeric; range of the statistic theta_3 is
 #'   multiplied with. Default NULL.
 #' @param burn_in numeric; burn-in iterations to remove.
-#'   For multiSiena input defaults to \code{max(x$nwarm, 1)};
+#'   For \code{multiSiena} input defaults to \code{max(x$nwarm, 1)};
 #'   for matrix input defaults to 0.
 #' @param thin numeric; thinning interval. Default 1.
 #' @param thresholds numeric; threshold for significance hashing.
 #'   Default \code{c(0.49999999999999999, 0.5)}.
-#' @param hyper_only logical; (multiSiena only) use only the
+#' @param hyper_only logical; (\code{multiSiena} only) use only the
 #'   hyper-parameter, or also produce group-level plots? Default TRUE.
 #' @param round_res numeric; rounding digits. Default 3.
 #' @param noTitle character; optional plot title.
@@ -46,11 +47,60 @@
 #' @param grid_density numeric; hash-grid density. Default 0.01.
 #' @param grid_spacing numeric; hash-grid spacing. Default 0.1.
 #' @param save logical; save plots with ggsave()? Default FALSE.
-#' @param folder character; save folder. Default NULL
-#'   ('int3ract JNplots' for multiSiena).
+#' @param folder character; save folder. Default NULL, which writes into a
+#'   session-temporary directory
+#'   (\code{file.path(tempdir(), 'int3ract JNKplots')}). Set explicitly to
+#'   write elsewhere.
 #'
-#' @returns list of plots.
+#' @returns A list containing tables and plots. For two-way interactions:
+#'   \code{param_table} and \code{plots}. For three-way: \code{thetas},
+#'   \code{standard_errors}, \code{p_values}, \code{significance}, and
+#'   \code{plots}. When \code{hyper_only = FALSE} ('multiSiena'), also returns a
+#'   list of group-level results under \code{random_groups_effects}.
 #' @export
+#'
+#' @examples
+#' # --- two-way: raw posterior matrix (fast, no extra packages) ---
+#' set.seed(1)
+#' n_iter <- 500
+#' post2 <- cbind(x     = rnorm(n_iter,  0.5, 0.2),
+#'                z     = rnorm(n_iter, -0.3, 0.2),
+#'                `x:z` = rnorm(n_iter,  0.4, 0.2))
+#'
+#' jnk_bayes2 <- JNK_bayes(post2,
+#'                         theta_1 = 'x', theta_2 = 'z',
+#'                         theta_1_vals = seq(-2, 2, 1),
+#'                         theta_2_vals = seq(-2, 2, 1))
+#'
+#' # --- three-way: raw posterior matrix ---
+#' post3 <- cbind(x       = rnorm(n_iter,  0.5, 0.2),
+#'                z       = rnorm(n_iter, -0.3, 0.2),
+#'                w       = rnorm(n_iter,  0.2, 0.2),
+#'                `x:z`   = rnorm(n_iter,  0.4, 0.2),
+#'                `x:w`   = rnorm(n_iter,  0.1, 0.2),
+#'                `z:w`   = rnorm(n_iter, -0.1, 0.2),
+#'                `x:z:w` = rnorm(n_iter,  0.2, 0.2))
+#'
+#' jnk_bayes3 <- JNK_bayes(post3,
+#'                         theta_1 = 'x', theta_2 = 'z', theta_3 = 'w',
+#'                         theta_1_vals = seq(-2, 2, 1),
+#'                         theta_2_vals = seq(-2, 2, 1),
+#'                         theta_3_vals = seq(-2, 2, 1))
+#'
+#' # --- two-way: integration with MCMCpack (only if installed) ---
+#' \donttest{
+#' if (requireNamespace("MCMCpack", quietly = TRUE)) {
+#'   set.seed(1402)
+#'   dat   <- data.frame(x = rnorm(100), z = rnorm(100))
+#'   dat$y <- dat$x + 0.5 * dat$x * dat$z - 0.5 * dat$z + rnorm(100, sd = 4)
+#'   mod_bayes2 <- MCMCpack::MCMCregress(y ~ x * z, data = dat,
+#'                                       burnin = 1000, mcmc = 10000,
+#'                                       thin = 1, verbose = 0)
+#'   jnk_bayes2_e <- JNK_bayes(mod_bayes2, theta_1 = 'x', theta_2 = 'z',
+#'                             theta_1_vals = seq(-3, 3, 0.5),
+#'                             theta_2_vals = seq(-3, 3, 0.5))
+#' }
+#' }
 #'
 JNK_bayes <- function(x,
                       theta_1,
@@ -81,6 +131,7 @@ JNK_bayes <- function(x,
   
   threeWay <- !is.null(theta_3)
   if (is.null(thresholds)) thresholds <- c(0.49999999999999999, 0.5)
+  folder <- folder %||% file.path(tempdir(), 'int3ract JNKplots')
   
   call_support <- function(theta, group) {
     if (threeWay) {
@@ -130,48 +181,89 @@ JNK_bayes <- function(x,
   }
   
   if (inherits(x, 'multiSiena') || inherits(x, 'sienaBayesFit')) {
-    
-    eff    <- x$effects
-    deps   <- unique(eff$name)
-    folder <- folder %||% 'int3ract JNKplots'
-    
     if (is.null(burn_in)) burn_in <- max(x$nwarm, 1)
-    
-    first_rates <- sapply(deps, function(d) {
-      which(eff$name == d &
-              eff$functionName == 'Amount of network change in period 1')})
-    rates <- x$basicRate
-    rates[unlist(first_rates)] <- FALSE
-    eff <- eff[!rates, ]
+
+    eff <-  x$effects[!x$basicRate, ]
     rownames(eff) <- seq_len(nrow(eff))
-    
-    theta_1n <- .clean_effect_name(eff$effectName[theta_1])
-    theta_2n <- .clean_effect_name(eff$effectName[theta_2])
-    theta_3n <- if (threeWay) .clean_effect_name(eff$effectName[theta_3]) else NULL
-    
-    idx <- seq(burn_in, nrow(x$ThinParameters), thin)
-    
+
     thetas <- if (threeWay) {
       c(theta_1, theta_2, theta_3, theta_int_12,
         theta_int_13, theta_int_23, theta_int_123)
     } else {
       c(theta_1, theta_2, theta_int_12)
     }
-    
+
+    theta_labels <- if (threeWay) {
+      c('theta_1', 'theta_2', 'theta_3', 'theta_int_12',
+        'theta_int_13', 'theta_int_23', 'theta_int_123')
+    } else {
+      c('theta_1', 'theta_2', 'theta_int_12')
+    }
+
+    .stop_effect_overview <- function(...) {
+      stop(..., '\n',
+           'Effects are indexed by their position in the rate-excluded ',
+           'effects object, i.e. x$effects[!x$basicRate, ]. ',
+           'This model has ', nrow(eff), ' such effects:\n',
+           paste0('  ', format(seq_len(nrow(eff))), ': ',
+                  eff$effectName, collapse = '\n'),
+           call. = FALSE)
+    }
+
+    if (!is.numeric(thetas)) {
+      .stop_effect_overview(
+        'For multiSiena/sienaBayesFit input, theta_1[23] and the ',
+        'interaction terms must be given as numeric positions.')
+    }
+    if (anyNA(thetas) || any(thetas < 1 | thetas > nrow(eff)) ||
+        any(thetas != round(thetas))) {
+      bad <- thetas
+      bad_i <- which(is.na(bad) | bad < 1 | bad > nrow(eff) |
+                       bad != round(bad))
+      .stop_effect_overview(
+        paste0('Effect index out of range: ',
+               paste0(theta_labels[bad_i], ' = ', thetas[bad_i],
+                      collapse = ', '), '.'))
+    }
+
+    # ThinParameters/ThinPosteriorMu carry the group's basic rate parameters
+    # before the remaining effects, so effect i sits at i + n_rate.
+    n_rate <- sum(x$basicRate) / x$nGroup
+    if (n_rate != round(n_rate) ||
+        dim(x$ThinParameters)[3] != n_rate + nrow(eff)) {
+      stop('Cannot align the effects object with x$ThinParameters: expected ',
+           'x$nGroup (', x$nGroup, ') blocks of ', dim(x$ThinParameters)[3],
+           ' parameters made up of the basic rates (', sum(x$basicRate),
+           ' in total) plus ', nrow(eff), ' further effects.', call. = FALSE)
+    }
+
+    theta_1n <- .clean_effect_name(eff$effectName[theta_1])
+    theta_2n <- .clean_effect_name(eff$effectName[theta_2])
+    theta_3n <- if (threeWay) .clean_effect_name(eff$effectName[theta_3]) else NULL
+
+    idx <- seq(burn_in, nrow(x$ThinParameters), thin)
+
     any_random <- any(eff$randomEffects[thetas])
-    
+
     if (!any_random) {
-      theta <- x$ThinParameters[idx, 1, thetas]
+      theta <- x$ThinParameters[idx, 1, thetas + n_rate]
       return(call_support(theta, 'Eta'))
     }
-    
+
+    if (ncol(x$ThinPosteriorMu) != n_rate + sum(eff$randomEffects)) {
+      stop('Cannot align the effects object with x$ThinPosteriorMu: expected ',
+           n_rate, ' basic rate column(s) plus ', sum(eff$randomEffects),
+           ' random effects, but found ', ncol(x$ThinPosteriorMu),
+           ' columns.', call. = FALSE)
+    }
+
     extract_theta <- function(thetas) {
       eff_ran <- eff[eff$randomEffects, ]
       t(sapply(thetas, function(i) {
         if (eff$randomEffects[i]) {
-          x$ThinPosteriorMu[idx, which(as.numeric(rownames(eff_ran)) == i)]
+          x$ThinPosteriorMu[idx, which(as.numeric(rownames(eff_ran)) == i) + n_rate]
         } else {
-          x$ThinParameters[idx, 1, i]
+          x$ThinParameters[idx, 1, i + n_rate]
         }
       })) |> t()
     }
@@ -182,7 +274,7 @@ JNK_bayes <- function(x,
     if (!hyper_only) {
       randomResults <- setNames(
         lapply(seq_len(x$nGroup), function(i) {
-          theta_g <- x$ThinParameters[idx, i, thetas]
+          theta_g <- x$ThinParameters[idx, i, thetas + n_rate]
           call_support(theta_g, paste0('group', i))
         }),
         paste0('group', seq_len(x$nGroup))
