@@ -259,21 +259,22 @@ challenge for two-way interactions by identifying the regions of a
 moderator's range over which a focal effect is and is not statistically
 significant. The \textbf{int3ract} package for R implements the JN
 technique and its three-way extension (the Johnson--Neyman--Krause, or
-JNK, technique) for both frequentist and Bayesian models. The core
-function \texttt{JNK\_int()} can be applied to multiplicative
-interactions from (virtually) any model family. Dedicated wrappers
-(\texttt{JNK\_lm()} and \texttt{JNK\_siena()}) streamline the workflow
-for models fitted via \texttt{lm()}/\texttt{glm()} and \textbf{RSiena}'s
-\texttt{siena()}, respectively. For Bayesian Stochastic Actor-Oriented
-Models (SAOMs) estimated with \textbf{multiSiena}, the function
-\texttt{JNSienaBayes()} produces conditional posterior distributions.
-For two-way interactions, classic shaded confidence-band plots are
-created that visually demarcate significant and non-significant regions
-along the moderator range; three-way interactions yield colour-gradient
-heatmaps with optional crosshatch overlays for non-significant regions.
-The package is designed to encourage richer, region-specific reporting
-of interaction effects in place of the conventional single-slope
-spotlight approach.
+JNK, technique) for both frequentist and Bayesian models. The function
+\texttt{JNK\_freq()} auto-detects models fitted via
+\texttt{lm()}/\texttt{glm()}, \textbf{RSiena}'s \texttt{siena()}, or
+\textbf{lme4}'s \texttt{lmer()}/\texttt{glmer()}, but can also be
+applied to multiplicative interactions from (virtually) any model family
+by supplying a coefficient vector and covariance matrix directly. For
+Bayesian Stochastic Actor-Oriented Models (SAOMs) estimated with
+\textbf{multiSiena}, or any model producing posterior draws, the
+function \texttt{JNK\_bayes()} produces conditional posterior
+distributions. For two-way interactions, classic shaded confidence-band
+plots are created that visually demarcate significant and
+non-significant regions along the moderator range; three-way
+interactions yield colour-gradient heatmaps with optional crosshatch
+overlays for non-significant regions. The package is designed to
+encourage richer, region-specific reporting of interaction effects in
+place of the conventional single-slope spotlight approach.
 \end{abstract}
 
 
@@ -298,8 +299,9 @@ Originally proposed in the context of the analysis of covariance
 regression (Potthoff 1964) and updated by Bauer and Curran (2005), whose
 formulation is closest to what \textbf{int3ract} implements. Several R
 packages already address the two-way JN case, for instance,
-\textbf{interactions} (Long 2019) and \textbf{jtools} (Long 2020). The
-contribution of \textbf{int3ract} is threefold.
+\textbf{interactions} (Long 2019) and \textbf{jtools} (Long 2020) but
+none does so for three-way interactions. The contribution of
+\textbf{int3ract} is threefold.
 
 \begin{enumerate}
 \def\labelenumi{\arabic{enumi}.}
@@ -309,19 +311,22 @@ contribution of \textbf{int3ract} is threefold.
   interactions, producing a heatmap over the two-dimensional moderator
   grid rather than a single-axis ribbon plot.
 \item
-  \textbf{Model-agnostic frequentist engine.} The internal function
-  \texttt{JNK\_int()} requires only a coefficient vector and the
-  relevant sub-matrix of the parameter covariance matrix. It therefore
-  applies to any frequentist model that produces these
-  quantities---ordinary least squares, generalised linear models,
-  mixed-effects models, survival models, or Stochastic Actor-Oriented
-  Models---without modification.
+  \textbf{Model-agnostic frequentist engine.} \texttt{JNK\_freq()}
+  auto-detects \texttt{lm}, \texttt{glm}, \texttt{sienaFit}, and
+  \texttt{lmerMod}/\texttt{glmerMod} objects, but also accepts a raw
+  coefficient vector and covariance sub-matrix. It therefore applies to
+  any model that produces these quantities -- ordinary least squares,
+  generalised linear models, mixed-effects models, survival models, etc.
+  -- without modification. For \textbf{lme4} models with random
+  interaction terms, per-group Johnson--Neyman plots are available via
+  \texttt{fixed\_only\ =\ FALSE}.
 \item
-  \textbf{Bayesian SAOMs.} The function \texttt{JNSienaBayes()} adapts
-  the technique to the posterior distribution rather than the sampling
-  distribution, producing density plots (two-way) and posterior-mean
-  heatmaps with Bayesian \(p\)-value overlays (three-way) for models
-  estimated with \textbf{multiSiena}.
+  \textbf{Bayesian models.} The function \texttt{JNK\_bayes()} adapts
+  the technique to the posterior distribution rather than point
+  estimates, producing density plots (two-way) and posterior-mean
+  heatmaps with Bayesian \(p\)-value overlays (three-way). It accepts
+  \textbf{multiSiena} objects directly or raw posterior-draw matrices
+  from any Bayesian estimation.
 \end{enumerate}
 
 The remainder of the paper is organised as follows.
@@ -329,8 +334,10 @@ Section~\ref{sec-background} reviews the statistical background of the
 JN technique and its three-way extension. Section~\ref{sec-package}
 describes the package architecture. Section~\ref{sec-freq} and
 Section~\ref{sec-bayes} illustrate the frequentist and Bayesian
-workflows with worked examples. Section~\ref{sec-graphics} discusses
-graphical customisation. Section~\ref{sec-conc} concludes.
+workflows with worked examples. Section~\ref{sec-SAOM} introduces the
+application to Stochastic Actor-Oriented Models (SAOMs) estimated with
+\textbf{RSiena} and \textbf{multiSiena}. Section~\ref{sec-graphics}
+discusses graphical customisation. Section~\ref{sec-conc} concludes.
 
 \section{Statistical Background}\label{sec-background}
 
@@ -427,96 +434,81 @@ superimposes a crosshatch pattern over cells where the null hypothesis
 
 \section{Package Architecture}\label{sec-package}
 
-The package is organised into four layers, summarised in
-Table~\ref{tbl-hierarchy}.
+The package is organised around two exported functions and a shared
+utility layer, summarised in Table~\ref{tbl-hierarchy}.
 
 \begin{longtable}[]{@{}
   >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3333}}
   >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3333}}
   >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3333}}@{}}
-\caption{Function hierarchy of \textbf{int3ract}. User-facing wrappers
-extract the relevant coefficients and covariance sub-matrix from the
-model object and pass them to the appropriate
-engine.}\label{tbl-hierarchy}\tabularnewline
+\caption{Function hierarchy of \textbf{int3ract}. Both exported
+functions auto-detect the model class and extract the relevant
+quantities before delegating to internal engines in
+\texttt{utils.R}.}\label{tbl-hierarchy}\tabularnewline
 \toprule\noalign{}
 \begin{minipage}[b]{\linewidth}\raggedright
-Entry point
+Function
 \end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-Model class
+Accepted input
 \end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-Core engine
+Internal engine
 \end{minipage} \\
 \midrule\noalign{}
 \endfirsthead
 \toprule\noalign{}
 \begin{minipage}[b]{\linewidth}\raggedright
-Entry point
+Function
 \end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-Model class
+Accepted input
 \end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-Core engine
+Internal engine
 \end{minipage} \\
 \midrule\noalign{}
 \endhead
 \bottomrule\noalign{}
 \endlastfoot
-\texttt{JNK\_lm()} & \texttt{lm}, \texttt{glm} & \texttt{JNK\_int()} \\
-\texttt{JNK\_siena()} & \texttt{sienaFit} (frequentist) &
-\texttt{JNK\_int()} \\
-\texttt{JNSienaBayes()} & \texttt{multiSiena} (Bayesian) &
-\texttt{jnb\_support2()}, \texttt{jnb\_support3()} \\
-\texttt{JNK\_int()} & \emph{any} (generic) & \texttt{parFun()},
-\texttt{seFun()} \\
+\texttt{JNK\_freq()} & \texttt{lm}, \texttt{glm}, \texttt{sienaFit},
+\texttt{lmerMod}/\texttt{glmerMod}, or raw \texttt{covar}/\texttt{coefs}
+& \texttt{.freq\_core()}, \texttt{parFun()}, \texttt{seFun()} \\
+\texttt{JNK\_bayes()} & \texttt{multiSiena}/\texttt{sienaBayesFit}, or
+raw posterior-draw matrix & \texttt{jnb\_support2()},
+\texttt{jnb\_support3()} \\
 \end{longtable}
 
-\textbf{Utility layer (\texttt{utils.R}).}\\
-\texttt{parFun()} and \texttt{seFun()} implement
-Equation~\ref{eq-theta3way} and Equation~\ref{eq-se3way}.
+\textbf{Utility layer (\texttt{utils.R}).} All internal helpers reside
+in a single file. \texttt{parFun()} and \texttt{seFun()} implement
+Equation~\ref{eq-theta3way} and Equation~\ref{eq-se3way}. Model-specific
+extractors (\texttt{.extract\_lm()}, \texttt{.extract\_siena()},
+\texttt{.extract\_lme4()}) handle the class-specific logic for
+\texttt{JNK\_freq()}. The Bayesian support functions
+\texttt{jnb\_support2()} and \texttt{jnb\_support3()} produce the
+posterior-based plots for \texttt{JNK\_bayes()}.
 
-\textbf{Core frequentist engine (\texttt{JNK\_int()}).}\\
-The function \texttt{JNK\_int()} accepts \texttt{name} (character vector
-of variable names), \texttt{coefs} (named numeric vector of model
-coefficients), \texttt{covar} (the corresponding covariance sub-matrix),
-and \texttt{vals} (a list of moderator value ranges). When a 2-way
-interaction is analysed, it returns two ribbon plots and two data
-frames; when a 3-way interaction, it returns three heatmaps together
-with the underlying matrices of point estimates, standard errors,
-\(p\)-values, and significance indicators.
+\textbf{Frequentist engine (\texttt{JNK\_freq()}).} \texttt{JNK\_freq()}
+auto-detects the class of its first argument and extracts coefficients,
+a covariance sub-matrix, variable names, and moderator value ranges. For
+\texttt{lm}/\texttt{glm} and \texttt{lmerMod}/\texttt{glmerMod} objects,
+interaction-term names are resolved automatically regardless of colon
+ordering. Researchers who can extract a coefficient vector and
+covariance matrix from any other model (whether fitted by
+\texttt{coxph()}, \texttt{betareg()}, or any other estimator) can call
+\texttt{JNK\_freq()} directly by supplying \texttt{covar} and
+\texttt{coefs}.
 
-Crucially, \texttt{JNK\_int()} is model-agnostic. Any researcher who can
-extract a coefficient vector and covariance matrix from their model
-(whether fitted by \texttt{lm()}, \texttt{glmer()}, \texttt{coxph()}, or
-any other estimator) can call \texttt{JNK\_int()} directly. The function
-can also be applied to Bayesian estimations, if one would reduce the
-posteriors to their mean and covariance structure.
+For \textbf{lme4} models with random interaction terms, setting
+\texttt{fixed\_only\ =\ FALSE} produces per-group Johnson--Neyman plots
+using the group-specific coefficients (fixed effects + BLUPs), mirroring
+the group-level output of \texttt{JNK\_bayes()}.
 
-\textbf{Frequentist wrappers.}\\
-\texttt{JNK\_lm()} extracts \texttt{coefficients} and \texttt{vcov()}
-from an \texttt{lm} or \texttt{glm} object and constructs the
-interaction-term names following \(\textsf{R}\)'s standard \texttt{:}
-convention before delegating to \texttt{JNK\_int()}.
+\textbf{Bayesian engine (\texttt{JNK\_bayes()}).} For Bayesian models
+there is no single-point estimate or analytic covariance matrix.
+Instead, conditional posteriors are used. \texttt{JNK\_bayes()} accepts
+either a raw matrix of posterior draws or a
+\texttt{multiSiena}/\texttt{sienaBayesFit} object (handling burn-in
+removal, thinning, and detection of fixed vs.~random parameters).
 
-\texttt{JNK\_siena()} extracts \texttt{\$theta} and \texttt{\$covtheta}
-from a \texttt{sienaFit} object. Because \textbf{RSiena} effects are
-harder to index by name\footnote{While effects are identifyable by name,
-  in complex models the same effect can appear multiple times for
-  different dependent variables and/or as different effect types, making
-  it harder on the user to provide accurate input to the
-  \texttt{JNK\_siena()} compared to using the already provided numbering
-  system in \texttt{siena()} outputs.}, the user supplies the indices
-for all main effects and interaction terms.
-
-\textbf{Bayesian engine (\texttt{JNSienaBayes()},
-\texttt{jnb\_support2()}, \texttt{jnb\_support3()}).}\\
-For Bayesian SAOMs there is no single-point estimate or analytic
-covariance matrix. Instead, conditional posteriors will be used.
-\texttt{JNSienaBayes()} handles burn-in removal and thinning, detects
-whether each parameter was estimated as fixed (\(\eta\)) or random
-(\(\mu\)), and routes to \texttt{jnb\_support2()} for 2-way interactions
-or \texttt{jnb\_support3()} for 3-way interactions.
-
-For two-way interactions, \texttt{jnb\_support2()} computes the
-conditional posterior draws
+For two-way interactions, \texttt{JNK\_bayes()} computes the conditional
+posterior draws
 
 \[
 \tilde{\theta}_X^{(s)}(m) = \theta^{(s)}_X + \theta^{(s)}_{XM} \cdot m
@@ -529,17 +521,17 @@ by the posterior mean, posterior standard deviation, and Bayesian
 \(p\)-value
 \(\Pr(\tilde{\theta}_X > 0 \mid \text{data}, \text{model}, \text{prior})\).
 
-For three-way interactions, \texttt{jnb\_support3()} extends this to the
-grid \((m, w)\), producing heatmaps of both the posterior mean and the
-Bayesian \(p\)-value, each overlaid with a crosshatch on cells outside
-the user-specified ``significance'' thresholds.
+For three-way interactions, this is extended to the grid \((m, w)\),
+producing heatmaps of both the posterior mean and the Bayesian
+\(p\)-value, each overlaid with a crosshatch on cells outside the
+user-specified ``significance'' thresholds.
 
 \section{Frequentist Usage}\label{sec-freq}
 
 \subsection{\texorpdfstring{Two-Way Interaction with
 \texttt{lm}}{Two-Way Interaction with lm}}\label{two-way-interaction-with-lm}
 
-The simplest entry point is \texttt{JNK\_lm()} applied to an ordinary
+The simplest entry point is \texttt{JNK\_freq()} applied to an ordinary
 least-squares model.
 
 \begin{Shaded}
@@ -551,15 +543,15 @@ least-squares model.
                   \AttributeTok{z =} \FunctionTok{rnorm}\NormalTok{(}\DecValTok{100}\NormalTok{),}
                   \AttributeTok{w =} \FunctionTok{rnorm}\NormalTok{(}\DecValTok{100}\NormalTok{))}
 
-\NormalTok{dat}\SpecialCharTok{$}\NormalTok{y }\OtherTok{=}\NormalTok{ dat}\SpecialCharTok{$}\NormalTok{x }\SpecialCharTok{+} \FloatTok{0.5} \SpecialCharTok{*}\NormalTok{ dat}\SpecialCharTok{$}\NormalTok{z }\SpecialCharTok{+} \SpecialCharTok{{-}}\NormalTok{.}\DecValTok{5} \SpecialCharTok{*}\NormalTok{ dat}\SpecialCharTok{$}\NormalTok{w }\SpecialCharTok{+} \FloatTok{0.5} \SpecialCharTok{*}\NormalTok{ dat}\SpecialCharTok{$}\NormalTok{x }\SpecialCharTok{*} 
+\NormalTok{dat}\SpecialCharTok{$}\NormalTok{y }\OtherTok{=}\NormalTok{ dat}\SpecialCharTok{$}\NormalTok{x }\SpecialCharTok{+} \FloatTok{0.5} \SpecialCharTok{*}\NormalTok{ dat}\SpecialCharTok{$}\NormalTok{z }\SpecialCharTok{+} \SpecialCharTok{{-}}\NormalTok{.}\DecValTok{5} \SpecialCharTok{*}\NormalTok{ dat}\SpecialCharTok{$}\NormalTok{w }\SpecialCharTok{+} \FloatTok{0.5} \SpecialCharTok{*}\NormalTok{ dat}\SpecialCharTok{$}\NormalTok{x }\SpecialCharTok{*}
 \NormalTok{  dat}\SpecialCharTok{$}\NormalTok{z }\SpecialCharTok{*}\NormalTok{ dat}\SpecialCharTok{$}\NormalTok{w }\SpecialCharTok{+} \FunctionTok{rnorm}\NormalTok{(}\DecValTok{100}\NormalTok{,}\AttributeTok{sd =} \DecValTok{4}\NormalTok{)}
 
 \NormalTok{mod2 }\OtherTok{\textless{}{-}} \FunctionTok{lm}\NormalTok{(y }\SpecialCharTok{\textasciitilde{}}\NormalTok{ x }\SpecialCharTok{*}\NormalTok{ z, }\AttributeTok{data =}\NormalTok{ dat)}
 
-\NormalTok{jn2 }\OtherTok{\textless{}{-}} \FunctionTok{JNK\_lm}\NormalTok{(mod2,}
-              \AttributeTok{theta\_1 =} \StringTok{"x"}\NormalTok{,}
-              \AttributeTok{theta\_2 =} \StringTok{"z"}\NormalTok{,}
-              \AttributeTok{alpha   =} \FloatTok{0.05}\NormalTok{)}
+\NormalTok{jn2 }\OtherTok{\textless{}{-}} \FunctionTok{JNK\_freq}\NormalTok{(mod2,}
+                \AttributeTok{theta\_1 =} \StringTok{"x"}\NormalTok{,}
+                \AttributeTok{theta\_2 =} \StringTok{"z"}\NormalTok{,}
+                \AttributeTok{alpha   =} \FloatTok{0.05}\NormalTok{)}
 \end{Highlighting}
 \end{Shaded}
 
@@ -619,11 +611,11 @@ In each plot the ribbon is filled with \texttt{sig\_color} (default
 \begin{Highlighting}[]
 \NormalTok{mod3 }\OtherTok{\textless{}{-}} \FunctionTok{lm}\NormalTok{(y }\SpecialCharTok{\textasciitilde{}}\NormalTok{ x }\SpecialCharTok{*}\NormalTok{ z }\SpecialCharTok{*}\NormalTok{ w, }\AttributeTok{data =}\NormalTok{ dat)}
 
-\NormalTok{jn3 }\OtherTok{\textless{}{-}} \FunctionTok{JNK\_lm}\NormalTok{(mod3,}
-               \AttributeTok{theta\_1    =} \StringTok{"x"}\NormalTok{,}
-               \AttributeTok{theta\_2    =} \StringTok{"z"}\NormalTok{,}
-               \AttributeTok{theta\_3    =} \StringTok{"w"}\NormalTok{,}
-               \AttributeTok{range\_size =} \DecValTok{50}\NormalTok{)}
+\NormalTok{jn3 }\OtherTok{\textless{}{-}} \FunctionTok{JNK\_freq}\NormalTok{(mod3,}
+                \AttributeTok{theta\_1    =} \StringTok{"x"}\NormalTok{,}
+                \AttributeTok{theta\_2    =} \StringTok{"z"}\NormalTok{,}
+                \AttributeTok{theta\_3    =} \StringTok{"w"}\NormalTok{,}
+                \AttributeTok{range\_size =} \DecValTok{100}\NormalTok{)}
 \end{Highlighting}
 \end{Shaded}
 
@@ -685,227 +677,245 @@ effect evaluations). When all three moderator ranges contain fewer than
 eight distinct values, the point estimate is printed in each cell;
 otherwise only the colour gradient communicates the magnitude. The
 ranges for each variable are by default extracted from the
-\texttt{lm}/\texttt{glm} object but can also be supplied directly, which
-is always necessary for \texttt{JNK\_int()} and \texttt{JNK\_siena()}
-(see the code chunk below).
+\texttt{lm}/\texttt{glm}/\texttt{lmerMod} object but can also be
+supplied directly, which is always necessary for \texttt{sienaFit}
+objects and the generic \texttt{covar}/\texttt{coefs} path (see the code
+chunks below).
 
-\subsection{\texorpdfstring{Stochastic Actor-Oriented Models
-(\texttt{JNK\_siena()})}{Stochastic Actor-Oriented Models (JNK\_siena())}}\label{stochastic-actor-oriented-models-jnk_siena}
+\subsection{\texorpdfstring{Mixed-Effects Models
+(\textbf{lme4})}{Mixed-Effects Models (lme4)}}\label{mixed-effects-models-lme4}
 
-SAOMs estimated by \textbf{RSiena}'s \texttt{siena()} (formerly
-\texttt{siena07()}) are the primary application domain for which this
-package was developed, because interaction effects between network
-statistics and actor attributes are common yet difficult to interpret
-(T. A. B. Snijders et al. 2026). The interface mirrors
-\texttt{JNK\_lm()} but uses integer indices referencing the position of
-each effect in the \textbf{RSiena} effects object\footnote{While each
-  effect in \textbf{RSiena} is named, within a given model, effects are
-  not necessarily identifiable by their name but the same name might
-  appear multiple times for different dependent variables or effect
-  types}.
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Two{-}way interaction}
-\NormalTok{x2 }\OtherTok{\textless{}{-}} \FunctionTok{JNK\_siena}\NormalTok{(res,}
-                 \AttributeTok{theta\_1      =} \DecValTok{6}\NormalTok{,}
-                 \AttributeTok{theta\_2      =} \DecValTok{7}\NormalTok{,}
-                 \AttributeTok{theta\_int\_12 =} \DecValTok{8}\NormalTok{,}
-                 \AttributeTok{theta\_1vals  =} \SpecialCharTok{{-}}\DecValTok{10}\SpecialCharTok{:}\DecValTok{10}\NormalTok{,}
-                 \AttributeTok{theta\_2vals  =} \SpecialCharTok{{-}}\DecValTok{10}\SpecialCharTok{:}\DecValTok{10}\NormalTok{)}
-
-\CommentTok{\# Three{-}way extension}
-\NormalTok{x3 }\OtherTok{\textless{}{-}} \FunctionTok{JNK\_siena}\NormalTok{(res,}
-                 \AttributeTok{theta\_1       =} \DecValTok{6}\NormalTok{,}
-                 \AttributeTok{theta\_2       =} \DecValTok{7}\NormalTok{,}
-                 \AttributeTok{theta\_3       =} \DecValTok{5}\NormalTok{,}
-                 \AttributeTok{theta\_int\_12  =} \DecValTok{8}\NormalTok{,}
-                 \AttributeTok{theta\_int\_13  =} \DecValTok{10}\NormalTok{,}
-                 \AttributeTok{theta\_int\_23  =} \DecValTok{9}\NormalTok{,}
-                 \AttributeTok{theta\_int\_123 =} \DecValTok{11}\NormalTok{,}
-                 \AttributeTok{theta\_1vals   =} \SpecialCharTok{{-}}\DecValTok{10}\SpecialCharTok{:}\DecValTok{10}\NormalTok{,}
-                 \AttributeTok{theta\_2vals   =} \SpecialCharTok{{-}}\DecValTok{10}\SpecialCharTok{:}\DecValTok{10}\NormalTok{,}
-                 \AttributeTok{theta\_3vals   =} \DecValTok{0}\SpecialCharTok{:}\DecValTok{6}\NormalTok{,}
-                 \AttributeTok{range\_size    =} \DecValTok{10}\NormalTok{)}
-\end{Highlighting}
-\end{Shaded}
-
-The moderator value ranges (\texttt{theta\_1vals},
-\texttt{theta\_2vals}, \texttt{theta\_3vals}) should reflect the
-empirical support of the corresponding change statistics. By default
-\texttt{range\_size\ =\ 500} equidistant points are drawn from these
-ranges. The returned tables and plots are named as derived from the
-model using the `name' column in the \textbf{RSiena} effects object.
-
-\subsection{\texorpdfstring{Direct Use of
-\texttt{JNK\_int()}}{Direct Use of JNK\_int()}}\label{direct-use-of-jnk_int}
-
-Because \texttt{JNK\_int()} requires only a coefficient vector and a
-covariance matrix, it is straightforward to apply it to models not
-covered by the existing wrappers. For instance, for a mixed-effects
-model fitted with \textbf{lme4}:
+\texttt{JNK\_freq()} natively supports \texttt{lmerMod} and
+\texttt{glmerMod} objects from \textbf{lme4}. For fixed effects the
+interface is identical to \texttt{lm}:
 
 \begin{Shaded}
 \begin{Highlighting}[]
 \FunctionTok{library}\NormalTok{(lme4)}
 \FunctionTok{library}\NormalTok{(int3ract)}
 
-\NormalTok{lme\_mod }\OtherTok{\textless{}{-}} \FunctionTok{lmer}\NormalTok{(y }\SpecialCharTok{\textasciitilde{}}\NormalTok{ x }\SpecialCharTok{*}\NormalTok{ z }\SpecialCharTok{+}\NormalTok{ (}\DecValTok{1} \SpecialCharTok{|}\NormalTok{ group), }\AttributeTok{data =}\NormalTok{ dat)}
+\NormalTok{lme\_mod }\OtherTok{\textless{}{-}} \FunctionTok{lmer}\NormalTok{(y }\SpecialCharTok{\textasciitilde{}}\NormalTok{ x }\SpecialCharTok{*}\NormalTok{ z }\SpecialCharTok{+}\NormalTok{ (x }\SpecialCharTok{*}\NormalTok{ z }\SpecialCharTok{|}\NormalTok{ group), }\AttributeTok{data =}\NormalTok{ dat)}
 
-\NormalTok{all\_coef }\OtherTok{\textless{}{-}} \FunctionTok{fixef}\NormalTok{(lme\_mod)}
-\NormalTok{all\_vcov }\OtherTok{\textless{}{-}} \FunctionTok{as.matrix}\NormalTok{(}\FunctionTok{vcov}\NormalTok{(lme\_mod))}
-\NormalTok{sel      }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(}\StringTok{"x"}\NormalTok{, }\StringTok{"z"}\NormalTok{, }\StringTok{"x:z"}\NormalTok{)}
+\NormalTok{jn\_lme }\OtherTok{\textless{}{-}} \FunctionTok{JNK\_freq}\NormalTok{(lme\_mod,}
+                   \AttributeTok{theta\_1 =} \StringTok{"x"}\NormalTok{,}
+                   \AttributeTok{theta\_2 =} \StringTok{"z"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
 
-\FunctionTok{JNK\_int}\NormalTok{(}\AttributeTok{name  =} \FunctionTok{c}\NormalTok{(}\StringTok{"x"}\NormalTok{, }\StringTok{"z"}\NormalTok{),}
-         \AttributeTok{coefs =}\NormalTok{ all\_coef[sel],}
-         \AttributeTok{covar =}\NormalTok{ all\_vcov[sel, sel],}
-         \AttributeTok{vals  =} \FunctionTok{list}\NormalTok{(}\FunctionTok{range}\NormalTok{(dat}\SpecialCharTok{$}\NormalTok{x), }\FunctionTok{range}\NormalTok{(dat}\SpecialCharTok{$}\NormalTok{z)),}
-         \AttributeTok{range\_size =} \DecValTok{1000}\NormalTok{)}
+When the interaction terms are random, setting
+\texttt{fixed\_only\ =\ FALSE} produces per-group Johnson--Neyman plots
+using group-specific coefficients (fixed effects + BLUPs). The grouping
+variable defaults to the first random-effects term but can be specified
+via \texttt{group\_var}:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{jn\_groups }\OtherTok{\textless{}{-}} \FunctionTok{JNK\_freq}\NormalTok{(lme\_mod,}
+                      \AttributeTok{theta\_1    =} \StringTok{"x"}\NormalTok{,}
+                      \AttributeTok{theta\_2    =} \StringTok{"z"}\NormalTok{,}
+                      \AttributeTok{fixed\_only =} \ConstantTok{FALSE}\NormalTok{,}
+                      \AttributeTok{group\_var  =} \StringTok{"group"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\subsection{Direct Use with Coefficient
+Vectors}\label{direct-use-with-coefficient-vectors}
+
+Because \texttt{JNK\_freq()} also accepts a raw coefficient vector and
+covariance matrix, it is straightforward to apply it to models not
+covered by the built-in extractors or to Bayesian models when the
+posterior is reduced to a covariance matrix and point estimates:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{JNK\_freq}\NormalTok{(}\AttributeTok{covar =}\NormalTok{ my\_vcov[}\FunctionTok{c}\NormalTok{(}\StringTok{"x"}\NormalTok{,}\StringTok{"z"}\NormalTok{,}\StringTok{"x:z"}\NormalTok{), }\FunctionTok{c}\NormalTok{(}\StringTok{"x"}\NormalTok{,}\StringTok{"z"}\NormalTok{,}\StringTok{"x:z"}\NormalTok{)],}
+         \AttributeTok{coefs =}\NormalTok{ my\_coefs[}\FunctionTok{c}\NormalTok{(}\StringTok{"x"}\NormalTok{,}\StringTok{"z"}\NormalTok{,}\StringTok{"x:z"}\NormalTok{)],}
+         \AttributeTok{name  =} \FunctionTok{c}\NormalTok{(}\StringTok{"x"}\NormalTok{, }\StringTok{"z"}\NormalTok{),}
+         \AttributeTok{theta\_1 =} \StringTok{"x"}\NormalTok{, }\AttributeTok{theta\_2 =} \StringTok{"z"}\NormalTok{,}
+         \AttributeTok{theta\_1\_vals =} \FunctionTok{c}\NormalTok{(}\SpecialCharTok{{-}}\DecValTok{3}\NormalTok{, }\DecValTok{3}\NormalTok{),}
+         \AttributeTok{theta\_2\_vals =} \FunctionTok{c}\NormalTok{(}\SpecialCharTok{{-}}\DecValTok{3}\NormalTok{, }\DecValTok{3}\NormalTok{))}
 \end{Highlighting}
 \end{Shaded}
 
 The same pattern applies to survival models (\textbf{survival}), ordinal
 regression (\textbf{MASS}), beta regression (\textbf{betareg}), and any
-other estimation that that provides parameter estimates and their
+other estimation that provides parameter estimates and their
 covariances.
 
-\section{\texorpdfstring{Bayesian Usage:
-\texttt{JNSienaBayes()}}{Bayesian Usage: JNSienaBayes()}}\label{sec-bayes}
+\section{Bayesian Usage}\label{sec-bayes}
 
-For multi-group Bayesian SAOMs estimated with \textbf{multiSiena} (T.
-Snijders, Koskinen, and Ripley 2026; Koskinen and Snijders 2023), a
-series of conditional posterior distributions over the range of the
-moderator replaces the classic JN-framework. If the moderator range is
-given explicitly with fewer than eight unique values, distinct colors
-are used to plot each The function \texttt{JNSienaBayes()} automatically
-detects whether each required parameter has been estimated as a fixed
-effect (\(\eta\); shared across groups) or as a random effect (\(\mu\);
-group-varying, with a hyper-parameter), and extracts the appropriate
-posterior draws.
+Using \texttt{JNK\_bayes()} is as straightforward as using
+\texttt{JNK\_freq()}. The function either expects a posterior matrix or
+sienaBayesFit/multiSiena object, from which it extracts the relevant
+posterior draws. The same arguments for specifying the parameters and
+their values apply as for \texttt{JNK\_freq()}, but instead of
+confidence intervals and \(p\)-values, the output includes conditional
+posterior means, standard deviations, and Bayesian \(p\)-values
+(\(\Pr(\tilde{\theta}_X > 0 \mid \text{data}, \text{model}, \text{prior})\)).
 
-The returned object is a named list similar to those returned for
-frequentist interactions. Each table here contains the posterior mean,
-posterior SD, Bayesian \(p\)-value
-(\(\Pr(\tilde{\theta}_X > 0 \mid \text{data}, \text{model}, \text{prior})\)),
-and 2.5th and 97.5th percentiles of the conditional posterior for each
-moderator value.
+Parameters can either be specified by name (here, the posterior matrix
+\texttt{x} should be named accordingly) or by integer index (the
+position of the parameter in the posterior matrix). If names are given,
+only \texttt{theta\_1}, \texttt{theta\_2}, and, if applicable,
+\texttt{theta\_3} need to be specified and the interactions are detected
+automatically (interactions should be named with the standard
+\(\textsf{R}\) notation for interactions, i.e., \texttt{x:z}).
 
-When \texttt{hyper\_only\ =\ FALSE} and at least one of the involved
-parameters is randomly varying between groups, \texttt{JNSienaBayes()}
+The \texttt{thresholds} argument (a vector of length 2, e.g.,
+\texttt{c(0.05,\ 0.95)}) determines which cells of the posterior-mean
+heatmap are crosshatched: cells whose Bayesian \(p\)-value falls inside
+the interval \([\mathrm{threshold}_1, \mathrm{threshold}_2]\) can be
+treated as `non-significant'.
+
+The function also handled burn-in iterations and thinning if desired via
+the the \texttt{thin} and \texttt{burn\_in} arguments (default no
+thinning and no burn-in iterations).
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{library}\NormalTok{(MCMCpack)}
+
+\NormalTok{mod\_bayes2 }\OtherTok{\textless{}{-}} \FunctionTok{MCMCregress}\NormalTok{(y }\SpecialCharTok{\textasciitilde{}}\NormalTok{ x }\SpecialCharTok{*}\NormalTok{ z, }\AttributeTok{data =}\NormalTok{ dat,}
+                          \AttributeTok{burnin =} \DecValTok{1000}\NormalTok{, }\AttributeTok{mcmc =} \DecValTok{10000}\NormalTok{, }\AttributeTok{thin =} \DecValTok{1}\NormalTok{,}
+                          \AttributeTok{verbose =} \DecValTok{0}\NormalTok{)}
+
+
+\NormalTok{jnk\_bayes2 }\OtherTok{\textless{}{-}} \FunctionTok{JNK\_bayes}\NormalTok{(mod\_bayes2, }\AttributeTok{theta\_1 =} \StringTok{\textquotesingle{}x\textquotesingle{}}\NormalTok{, }\AttributeTok{theta\_2 =} \StringTok{\textquotesingle{}z\textquotesingle{}}\NormalTok{,}
+                        \AttributeTok{theta\_1\_vals =} \FunctionTok{seq}\NormalTok{(}\SpecialCharTok{{-}}\DecValTok{3}\NormalTok{,}\DecValTok{3}\NormalTok{,}\FloatTok{0.5}\NormalTok{), }
+                        \AttributeTok{theta\_2\_vals =} \FunctionTok{seq}\NormalTok{(}\SpecialCharTok{{-}}\DecValTok{3}\NormalTok{,}\DecValTok{3}\NormalTok{,}\FloatTok{0.5}\NormalTok{))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{figure}[H]
+
+\begin{minipage}{0.50\linewidth}
+
+\centering{
+
+\pandocbounded{\includegraphics[keepaspectratio]{int3ract_paper_files/figure-pdf/fig-jn-bayes2-1.pdf}}
+
+}
+
+\subcaption{\label{fig-jn-bayes2-1}Conditional effect of \texttt{x} as a
+function of the moderator \texttt{z}.}
+
+\end{minipage}%
+%
+\begin{minipage}{0.50\linewidth}
+
+\centering{
+
+\pandocbounded{\includegraphics[keepaspectratio]{int3ract_paper_files/figure-pdf/fig-jn-bayes2-2.pdf}}
+
+}
+
+\subcaption{\label{fig-jn-bayes2-2}Conditional effect of \texttt{z} as a
+function of the moderator \texttt{x}.}
+
+\end{minipage}%
+
+\caption{\label{fig-jn-bayes2}Johnson--Neyman--Krause plots for the
+two-way interaction between \texttt{x} and \texttt{z}. Each curve
+represents a conditional posterior distribution of the focal effect at a
+given value of the moderator.}
+
+\end{figure}%
+
+Three-way plots in turn return heatmaps of the posterior mean and
+Bayesian \(p\)-value.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{mod\_bayes3 }\OtherTok{\textless{}{-}} \FunctionTok{MCMCregress}\NormalTok{(y }\SpecialCharTok{\textasciitilde{}}\NormalTok{ x }\SpecialCharTok{*}\NormalTok{ z }\SpecialCharTok{*}\NormalTok{ w, }\AttributeTok{data =}\NormalTok{ dat,}
+                          \AttributeTok{burnin =} \DecValTok{1000}\NormalTok{, }\AttributeTok{mcmc =} \DecValTok{10000}\NormalTok{, }\AttributeTok{thin =} \DecValTok{1}\NormalTok{,}
+                          \AttributeTok{verbose =} \DecValTok{0}\NormalTok{)}
+
+
+\NormalTok{jnk\_bayes3 }\OtherTok{\textless{}{-}} \FunctionTok{JNK\_bayes}\NormalTok{(mod\_bayes3, }
+                        \AttributeTok{theta\_1 =} \StringTok{\textquotesingle{}x\textquotesingle{}}\NormalTok{, }
+                        \AttributeTok{theta\_2 =} \StringTok{\textquotesingle{}z\textquotesingle{}}\NormalTok{,}
+                        \AttributeTok{theta\_3 =} \StringTok{\textquotesingle{}w\textquotesingle{}}\NormalTok{,}
+                        \AttributeTok{theta\_1\_vals =} \FunctionTok{seq}\NormalTok{(}\SpecialCharTok{{-}}\DecValTok{3}\NormalTok{,}\DecValTok{3}\NormalTok{,}\FloatTok{0.1}\NormalTok{), }
+                        \AttributeTok{theta\_2\_vals =} \FunctionTok{seq}\NormalTok{(}\SpecialCharTok{{-}}\DecValTok{3}\NormalTok{,}\DecValTok{3}\NormalTok{,}\FloatTok{0.1}\NormalTok{), }
+                        \AttributeTok{theta\_3\_vals =} \FunctionTok{seq}\NormalTok{(}\SpecialCharTok{{-}}\DecValTok{3}\NormalTok{,}\DecValTok{3}\NormalTok{,}\FloatTok{0.1}\NormalTok{),}
+                        \AttributeTok{thresholds =} \FunctionTok{c}\NormalTok{(}\FloatTok{0.05}\NormalTok{, }\FloatTok{0.95}\NormalTok{))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{figure}[H]
+
+\begin{minipage}{0.50\linewidth}
+
+\centering{
+
+\pandocbounded{\includegraphics[keepaspectratio]{int3ract_paper_files/figure-pdf/fig-jn-bayes3-1.pdf}}
+
+}
+
+\subcaption{\label{fig-jn-bayes3-1}Conditional posterior means of
+\texttt{w} as a function of the moderators \texttt{x} and \texttt{z}.}
+
+\end{minipage}%
+%
+\begin{minipage}{0.50\linewidth}
+
+\centering{
+
+\pandocbounded{\includegraphics[keepaspectratio]{int3ract_paper_files/figure-pdf/fig-jn-bayes3-2.pdf}}
+
+}
+
+\subcaption{\label{fig-jn-bayes3-2}Conditional posterior means of
+\texttt{z} as a function of the moderator \texttt{x}.}
+
+\end{minipage}%
+
+\caption{\label{fig-jn-bayes3}Johnson--Neyman--Krause plots for the
+three-way interaction between \texttt{x}, \texttt{z}, and \texttt{w}.
+The color gradient of the heatmap shows the value of conditional
+posterior mean of the focal effect. Crosshatch overlays indicate cells
+where the Bayesian \(p\)-value falls outside the threshold (here \(p\)
+\textless{} 0.05 or \(p\) \textgreater{} 0.95).}
+
+\end{figure}%
+
+\section{Stochastic Actor-Oriented Models}\label{sec-SAOM}
+
+Interactions in SAOMs, estimated by \textbf{RSiena}'s \texttt{siena()}
+(formerly \texttt{siena07()}), between network statistics and actor
+attributes are common yet difficult to interpret (T. A. B. Snijders et
+al. 2026). Introducing SAOMs is out of the scope for this paper. If you
+wish to learn more about them, see for instance T. A. Snijders (2017).
+In short, SAOMs are models for network evolution, designed to identify
+the structural and covariate drivers that lead to the creation,
+dissolution, and maintenance of connections in networks.
+
+The same \texttt{JNK\_freq()} function handles \texttt{sienaFit}
+objects, using integer indices referencing the position of each effect
+in the \textbf{RSiena} effects object\footnote{While each effect in
+  \textbf{RSiena} is named, within a given model, effects are not
+  necessarily identifiable by their name but the same name might appear
+  multiple times for different dependent variables or effect types,
+  making secure unique indexing by integer much easier for users.}. In
+\texttt{JNK\_bayes()} the rate functions are skipped in the indexing!
+The moderator value ranges (\texttt{theta\_1\_vals},
+\texttt{theta\_2\_vals}, \texttt{theta\_3\_vals}) should reflect the
+empirical support of the corresponding change statistics.
+
+\texttt{JNK\_bayes()} automatically detects whether each required
+parameter has been estimated as a fixed effect (\(\eta\); shared across
+groups) or as a random effect (\(\mu\); group-varying, with a
+hyper-parameter), and extracts the appropriate posterior draws. When
+\texttt{hyper\_only\ =\ FALSE} and at least one of the involved
+parameters is randomly varying between groups, \texttt{JNK\_bayes()}
 additionally loops over all \(G\) groups and produces group-specific
 plots and tables, returned under the key
 \texttt{random\_groups\_effects}. This is useful for assessing
-heterogeneity of interaction effects across networks. Two additional
-arguments are helpful when many plots are made: \texttt{save\ =\ TRUE}
-will save each plot with \texttt{ggsave()}. To avoid cluttering your
-working directory, \texttt{folder} provides the location of a folder
-where the plots will be stored. If no input is provided, a new folder
-\texttt{int3ract\ JNplots} will be created (note that RStudio will ask
-you in the console whether such a folder is allowed to be created, if it
-does not exist yet).
-
-For three-way interactions, the call is extended as usual. The
-\texttt{thresholds} argument (a vector of length 2, e.g.,
-\texttt{c(0.05,\ 0.95)}) determines which cells of the posterior-mean
-heatmap are crosshatched: cells whose Bayesian \(p\)-value falls inside
-the interval \([\mathrm{threshold}_1, \mathrm{threshold}_2]\) are
-treated as non-significant.
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\NormalTok{jnb2 }\OtherTok{\textless{}{-}} \FunctionTok{JNSienaBayes}\NormalTok{(}\AttributeTok{sbo          =}\NormalTok{ my\_multiSiena\_result,}
-                     \AttributeTok{theta\_1      =} \DecValTok{4}\NormalTok{,}
-                     \AttributeTok{theta\_2      =} \DecValTok{7}\NormalTok{,}
-                     \AttributeTok{theta\_int\_12 =} \DecValTok{9}\NormalTok{,}
-                     \AttributeTok{theta\_1\_vals =} \FunctionTok{c}\NormalTok{(}\SpecialCharTok{{-}}\DecValTok{1}\NormalTok{,}\DecValTok{0}\NormalTok{,}\DecValTok{1}\NormalTok{),}
-                     \AttributeTok{theta\_2\_vals =} \FunctionTok{seq}\NormalTok{(}\SpecialCharTok{{-}}\DecValTok{3}\NormalTok{,}\DecValTok{3}\NormalTok{,}\FloatTok{0.5}\NormalTok{),}
-                     \AttributeTok{burnIn       =} \DecValTok{500}\NormalTok{,}
-                     \AttributeTok{thin         =} \DecValTok{2}\NormalTok{,}
-                     \AttributeTok{save         =} \ConstantTok{FALSE}\NormalTok{)}
-\end{Highlighting}
-\end{Shaded}
-
-\begin{figure}[H]
-
-\begin{minipage}{\linewidth}
-
-\centering{
-
-\pandocbounded{\includegraphics[keepaspectratio]{int3ract_paper_files/figure-pdf/fig-bayes-2fake-1.pdf}}
-
-}
-
-\subcaption{\label{fig-bayes-2fake-1}Posterior densities for altX
-conditional on simultaneous changes in reciprocity. In this example,
-altX is always positive but has larger variance when reciprocity would
-decrease (i.e., a reciprocal tie to someone with negative values on the
-covariate would be broken, leading to -1 in recirpocity but overall an
-increase in altX).}
-
-\end{minipage}%
-\newline
-\begin{minipage}{\linewidth}
-
-\centering{
-
-\pandocbounded{\includegraphics[keepaspectratio]{int3ract_paper_files/figure-pdf/fig-bayes-2fake-2.pdf}}
-
-}
-
-\subcaption{\label{fig-bayes-2fake-2}Posterior densities for reciprocity
-conditional on simultaneous changes in altX. Here, while generally
-positive, reciprocity only has a consistently positive effect on tie
-formation when altX changes moderately, around -1 to 1 (yellow curves).
-While reciprocity gets more positive with increasing values in the
-change of altX, the posterior variance increases as well.}
-
-\end{minipage}%
-
-\caption{\label{fig-bayes-2fake}Conditional posterior densities for the
-parameters for reciprocity and altX on a attribute.}
-
-\end{figure}%
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\NormalTok{jnb3 }\OtherTok{\textless{}{-}} \FunctionTok{JNSienaBayes}\NormalTok{(}\AttributeTok{sbo           =}\NormalTok{ my\_multiSiena\_result,}
-                     \AttributeTok{theta\_1       =} \DecValTok{4}\NormalTok{,}
-                     \AttributeTok{theta\_2       =} \DecValTok{10}\NormalTok{,}
-                     \AttributeTok{theta\_3       =} \DecValTok{9}\NormalTok{,}
-                     \AttributeTok{theta\_int\_12  =} \DecValTok{21}\NormalTok{,}
-                     \AttributeTok{theta\_int\_13  =} \DecValTok{22}\NormalTok{,}
-                     \AttributeTok{theta\_int\_23  =} \DecValTok{11}\NormalTok{,}
-                     \AttributeTok{theta\_int\_123 =} \DecValTok{23}\NormalTok{,}
-                     \AttributeTok{theta\_1\_vals  =} \FunctionTok{seq}\NormalTok{(}\SpecialCharTok{{-}}\DecValTok{2}\NormalTok{, }\DecValTok{2}\NormalTok{, }\AttributeTok{length.out =} \DecValTok{50}\NormalTok{),}
-                     \AttributeTok{theta\_2\_vals  =} \FunctionTok{seq}\NormalTok{(}\SpecialCharTok{{-}}\DecValTok{2}\NormalTok{, }\DecValTok{2}\NormalTok{, }\AttributeTok{length.out =} \DecValTok{50}\NormalTok{),}
-                     \AttributeTok{theta\_3\_vals  =} \FunctionTok{seq}\NormalTok{(}\SpecialCharTok{{-}}\DecValTok{2}\NormalTok{, }\DecValTok{2}\NormalTok{, }\AttributeTok{length.out =} \DecValTok{50}\NormalTok{),}
-                     \AttributeTok{thresholds    =} \FunctionTok{c}\NormalTok{(}\FloatTok{0.05}\NormalTok{, }\FloatTok{0.95}\NormalTok{),}
-                     \AttributeTok{burnIn        =} \DecValTok{500}\NormalTok{,}
-                     \AttributeTok{thin          =} \DecValTok{2}\NormalTok{)}
-\end{Highlighting}
-\end{Shaded}
-
-\begin{figure}[H]
-
-\begin{minipage}{\linewidth}
-
-\centering{
-
-\pandocbounded{\includegraphics[keepaspectratio]{int3ract_paper_files/figure-pdf/fig-bayes-3fake-1.pdf}}
-
-}
-
-\subcaption{\label{fig-bayes-3fake}Mean posterior densities for the
-effect of ego's self-monitoring on tie creation conditional on ego's and
-alter's creativity. In this example, self-monitoring has a positive
-effect on tie creation when both ego and alter have similar levels of
-creativity.}
-
-\end{minipage}%
-
-\caption{\label{fig-bayes-3fake}Figures for Bayesian 3-way interactions}
-
-\end{figure}%
+heterogeneity of interaction effects across networks. It is strongly
+recommended to use \texttt{save\ =\ \ TRUE} when running
+\texttt{hyper\_only\ =\ FALSE} so that all plots are directly created
+and saved. While this extends run-time, it will make it much easier to
+inspect the figures.
 
 \section{Graphical Output and Customisation}\label{sec-graphics}
 
@@ -939,7 +949,7 @@ highlighted in their respective colour.}
 {\small non\_sig\_color} & Ribbon fill for non-significant regions (2-way) & {\small \cellcolor[HTML]{D2691E}{\textcolor[HTML]{FFFFFF}{`chocolate'}}} \\ 
 {\small line\_color} & Point-estimate line colour (2-way) & {\small \cellcolor[HTML]{000000}{\textcolor[HTML]{FFFFFF}{`black'}}} \\ 
 {\small color\_low} & Low end of diverging fill scale (heatmaps) & {\small \cellcolor[HTML]{3B9AB2}{\textcolor[HTML]{000000}{`\#F05039'}}} \\ 
-{\small color\_mid} & Midpoint colour of diverging fill scale & {\small \cellcolor[HTML]{EBCC2A}{\textcolor[HTML]{000000}{`white'}}} \\ 
+{\small color\_mid} & Midpoint colour of diverging fill scale & {\small \cellcolor[HTML]{EBCC2A}{\textcolor[HTML]{000000}{`\#EBCC2A'}}} \\ 
 {\small color\_high} & High end of diverging fill scale & {\small \cellcolor[HTML]{F21A00}{\textcolor[HTML]{FFFFFF}{`\#000066'}}} \\ 
 {\small color\_grid} & Crosshatch line colour & {\small \cellcolor[HTML]{000000}{\textcolor[HTML]{FFFFFF}{`black'}}} \\ 
 {\small grid\_density} & Density of crosshatch lines & {\small 0.01} \\ 
@@ -957,55 +967,69 @@ highlighted in their respective colour.}
 
 \textbf{int3ract} provides a unified interface for the Johnson--Neyman
 technique and its three-way extension across a broad class of
-frequentist and Bayesian models. By exposing the core computation in a
-single model-agnostic function, \texttt{JNK\_int()}, the package invites
-adoption beyond the two model classes for which dedicated wrappers
-currently exist. Future development plans include:
+frequentist and Bayesian models. The two exported
+functions---\texttt{JNK\_freq()} for frequentist models and
+\texttt{JNK\_bayes()} for Bayesian models---auto-detect the input class
+and handle extraction internally, while remaining fully usable with raw
+coefficient vectors, covariance matrices, or posterior-draw matrices for
+models not covered by the built-in extractors. Native support for
+\textbf{lme4} mixed-effects models includes per-group Johnson--Neyman
+plots when interaction terms are random. Future development plans
+include:
 
 \begin{enumerate}
 \def\labelenumi{\arabic{enumi}.}
 \tightlist
 \item
-  A wrapper for \texttt{merMod} objects from \textbf{lme4} to allow for
-  randomly varying interactions.
-\item
   A consideration for FDR-correction.
 \item
-  A general Bayesian application
+  Additional Bayesian model classes beyond \textbf{multiSiena}.
 \end{enumerate}
 
 Researchers are encouraged to report not only the JN boundaries but also
 the full plots as supplementary material, in keeping with calls for more
-transparent and complete reporting of interaction effects (Simonsohn,
-Simmons, and Nelson 2020).
-
-\section{Dependencies}\label{dependencies}
-
-To give due credit, next to the already listed packages,
-\textbf{int3ract} also depends on \textbf{scales}, \textbf{tidyr}, and
-\textbf{tibble} (Wickham, Pedersen, and Seidel 2025; Wickham, Vaughan,
-and Girlich 2025; Müller and Wickham 2026).
+transparent and complete reporting of interaction effects\footnote{To
+  give due credit, next to the already listed packages,
+  \textbf{int3ract} also depends on \textbf{scales}, \textbf{tidyr}, and
+  \textbf{tibble} (Wickham, Pedersen, and Seidel 2025; Wickham, Vaughan,
+  and Girlich 2025; Müller and Wickham 2026). This paper was written
+  using \textbf{gt}, \textbf{lme4}, \textbf{MCMCpack}, and of coruse
+  \textbf{quarto} using \textbf{tinytex} (Iannone et al. 2026; Bates et
+  al. 2015; Allaire and Dervieux 2025)} (Simonsohn, Simmons, and Nelson
+2020).
 
 \section*{References}\label{references}
 \addcontentsline{toc}{section}{References}
 
 \phantomsection\label{refs}
 \begin{CSLReferences}{1}{0}
+\bibitem[\citeproctext]{ref-quarto}
+Allaire, JJ, and Christophe Dervieux. 2025. \emph{Quarto: R Interface to
+'Quarto' Markdown Publishing System}.
+\url{https://doi.org/10.32614/CRAN.package.quarto}.
+
+\bibitem[\citeproctext]{ref-lme4}
+Bates, Douglas, Martin Mächler, Ben Bolker, and Steve Walker. 2015.
+{``Fitting Linear Mixed-Effects Models Using {lme4}.''} \emph{Journal of
+Statistical Software} 67 (1): 1--48.
+\url{https://doi.org/10.18637/jss.v067.i01}.
+
 \bibitem[\citeproctext]{ref-Bauer2005}
 Bauer, Daniel J., and Patrick J. Curran. 2005. {``Probing Interactions
 in Fixed and Multilevel Regression: Inferential and Graphical
 Techniques.''} \emph{Multivariate Behavioral Research} 40 (3): 373--400.
 \url{https://doi.org/10.1207/s15327906mbr4003_5}.
 
+\bibitem[\citeproctext]{ref-gt}
+Iannone, Richard, Joe Cheng, Barret Schloerke, Shannon Haughton, Ellis
+Hughes, Alexandra Lauer, Romain François, JooYoung Seo, Ken Brevoort,
+and Olivier Roy. 2026. \emph{Gt: Easily Create Presentation-Ready
+Display Tables}. \url{https://doi.org/10.32614/CRAN.package.gt}.
+
 \bibitem[\citeproctext]{ref-Johnson1936}
 Johnson, Palmer O., and Jerzy Neyman. 1936. {``Tests of Certain Linear
 Hypotheses and Their Applications to Some Educational Problems.''}
 \emph{Statistical Research Memoirs} 1: 57--93.
-
-\bibitem[\citeproctext]{ref-Kosk23}
-Koskinen, Johan H., and Tom A. B. Snijders. 2023. {``Multilevel
-Longitudinal Analysis of Social Networks.''} \emph{Journal of the Royal
-Statistical Society, Series A} 186: 376--400.
 
 \bibitem[\citeproctext]{ref-Long2019}
 Long, Jacob Scott. 2019. \emph{{interactions}: Comprehensive,
@@ -1049,11 +1073,10 @@ Steglich, Nynke M. D. Niezink, Viviana Amati, and Felix Schoenenberger.
 Analysis}. Groningen, The Netherlands: University of Groningen.
 \url{https://www.stats.ox.ac.uk/~snijders/siena/}.
 
-\bibitem[\citeproctext]{ref-SienaMult}
-Snijders, Tom, Johan Koskinen, and Ruth Ripley. 2026. \emph{multiSiena -
-Simulation Investigation for Multilevel Empirical Network Analysis}.
-Groningen, The Netherlands: University of Groningen.
-\url{http://www.stats.ox.ac.uk/~snijders/siena}.
+\bibitem[\citeproctext]{ref-Snijders2017}
+Snijders, Tom AB. 2017. {``Stochastic Actor-Oriented Models for Network
+Dynamics.''} \emph{Annual Review of Statistics and Its Application} 4
+(1): 343--63.
 
 \bibitem[\citeproctext]{ref-ggpattern2022}
 Stewart, Mike. 2022. \emph{{ggpattern}: {ggplot2} Pattern Geoms}.
