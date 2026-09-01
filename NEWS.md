@@ -87,8 +87,8 @@
 * The three-way extension is no longer called the Johnson-Neyman-Krause or JNK
   technique; it is referred to as JN3.
 
-* The default `thresholds` for Bayesian analyses are now `c(alpha/2, 1 -
-  alpha/2)`, that is `c(0.025, 0.975)`. The previous default of
+* The default `thresholds` for Bayesian analyses are now 
+  `c(alpha/2, 1 - alpha/2)`, that is `c(0.025, 0.975)`. The previous default of
   `c(0.49999999999999999, 0.5)` marked essentially every cell significant.
   `JNK_bayes()` keeps the old default.
 
