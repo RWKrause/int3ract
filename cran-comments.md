@@ -1,9 +1,13 @@
+## Test environments
+
+* Windows 11, R 4.6.1 (local)
+* macOS 26.6, arm64, R 4.6.1 (macOS builder) -- Status: OK
+* win-builder, R-devel -- submitted 2026-09-01, result pending
+* win-builder, R-release -- submitted 2026-09-01, result pending
+
 ## R CMD check results
 
-0 errors | 0 warnings | 0 notes
-
-Checked on Windows (R 4.6.1), win-builder (R-devel and R-release) and the
-macOS builder.
+0 errors | 0 warnings | 0 notes on the two environments reported above.
 
 ## Notes on this submission
 
@@ -16,6 +20,6 @@ macOS builder.
   covariance between the two main effects where the delta method calls for the
   covariance between the focal main effect and the interaction, so two-way
   frequentist results produced by those versions change. This is documented in
-  NEWS.md, in the README and in the vignette.
+  NEWS.md, in the README and in the new vignette.
 
 * There are no reverse dependencies.
