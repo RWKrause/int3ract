@@ -48,22 +48,8 @@ po/*~
 # RStudio Connect folder
 rsconnect/
 
+# paper sources kept in the repo but out of the package
+/paper/*_files/
 
-^.*\.Rproj$
-^\.Rproj\.user$
-^\.github$
-^\.git$
-^\.gitignore$
-^README\.Rmd$
-^README-.*\.png$
-^cran-comments\.md$
-^doc$
-^docs$
-^_pkgdown\.yml$
-^pkgdown$
-^LICENSE\.md$
-^\.travis\.yml$
-^codecov\.yml$
-.positai
-.claude
-
+# stray device output
+Rplots.pdf
