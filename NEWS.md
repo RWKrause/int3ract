@@ -100,7 +100,8 @@
   moved from Imports to Suggests, since it is needed only for mixed-model
   input. `patchwork` was added, for the density panels.
 
-* The package now has a test suite.
+* The package now has a test suite and a `Getting started with int3ract`
+  vignette.
 
 # int3ract 1.0.7
 * Fixing stray files in package for CRAN submission

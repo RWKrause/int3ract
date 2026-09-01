@@ -1,0 +1,321 @@
+---
+title: "Getting started with int3ract"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting started with int3ract}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment  = "#>",
+  fig.width  = 6,
+  fig.height = 4,
+  dpi = 96
+)
+```
+
+## Why a region, and not a coefficient
+
+An interaction coefficient answers a question few people are actually asking.
+It says how the effect of one variable changes per unit of another, but not
+where along the moderator's range that effect is large enough to be
+distinguished from zero. Reporting the effect at the mean of the moderator, or
+at plus and minus one standard deviation, picks three arbitrary points out of a
+continuum.
+
+The Johnson-Neyman technique (Johnson and Neyman 1936; Johnson and Fay 1950)
+answers the question directly: it reports the *region of significance*, the
+stretch of the moderator over which the focal effect is distinguishable from
+zero. **int3ract** implements that technique, extends it to three-way
+interactions over a two-dimensional moderator grid (JN3), and applies it to
+Bayesian models by working on posterior draws instead of point estimates.
+
+The package has one entry point, `JN()`, which dispatches on the fitted object.
+Models carrying point estimates and a covariance matrix are analysed with Wald
+tests; objects carrying draws are analysed as conditional posteriors. Which of
+the two happens follows from the object you hand in, not from which function you
+call.
+
+```{r}
+library(int3ract)
+
+set.seed(1402)
+dat <- data.frame(x = rnorm(100), z = rnorm(100), w = rnorm(100))
+dat$y <- dat$x + 0.5 * dat$z - 0.5 * dat$w +
+  0.5 * dat$x * dat$z * dat$w + rnorm(100, sd = 4)
+```
+
+## Two-way interactions
+
+Fit the model as usual, then hand it to `JN()` along with the two variables
+involved in the interaction. The interaction term itself is found
+automatically, provided it is named in the standard R fashion (`x:z`).
+
+```{r}
+fit2 <- lm(y ~ x * z, data = dat)
+jn2  <- JN(fit2, theta_1 = "x", theta_2 = "z")
+jn2
+```
+
+Note that both variables get a turn as the focal one. In a two-way interaction
+neither variable is privileged: `x` moderated by `z` and `z` moderated by `x`
+are two views of the same model, and which one is interesting is a question
+about your theory, not about the fit. Here the effect of `x` is positive for
+values of `z` up to about 1.37, and the effect of `z` is nowhere distinguishable
+from zero.
+
+`summary()` adds the ranges over which the analysis was carried out:
+
+```{r}
+summary(jn2)
+```
+
+For two-way Wald analyses the boundaries are solved for exactly, from the
+quadratic that the delta method produces. They do not depend on how finely the
+moderator grid is sampled, so `range_size` affects only the smoothness of the
+figures, not the numbers reported here.
+
+### The figures
+
+`plot()` draws one figure per variable — two for a two-way analysis. Pass
+`which` for a single one.
+
+```{r fig.alt = "Conditional effect of x across the range of z, with a confidence band shaded by significance and a histogram of observed z values below."}
+plot(jn2, which = "x")
+```
+
+The panel underneath is not decoration. A region of significance that covers
+moderator values nobody in the sample actually had is not evidence of much, and
+it is the standard failure mode of this technique. The histogram shows how much
+empirical support each part of the range has. Observed values are taken from
+`lm`, `glm` and **lme4** models automatically; for any other input you can
+supply them through the `support` argument. Turn the panels off with
+`jn_style(show_density = FALSE)`.
+
+### Getting at the numbers
+
+`jn_regions()` returns the regions as a data frame, which is the form you want
+when the results go into a table or a further computation:
+
+```{r}
+jn_regions(jn2)
+```
+
+`data_share` is the proportion of observations falling inside the region — 88%
+here, so this is a region with real support behind it. `as.data.frame()` gives
+the full grid instead: the conditional effect, its standard error, `p` value and
+confidence limits at every moderator value evaluated.
+
+```{r}
+head(as.data.frame(jn2), 3)
+```
+
+`coef()` and `vcov()` return the coefficients and covariance submatrix the
+analysis was built from.
+
+## Three-way interactions
+
+With a third variable the moderator becomes two-dimensional, and the region of
+significance becomes an area on a grid. Everything else is the same; pass
+`theta_3`.
+
+```{r}
+fit3 <- lm(y ~ x * z * w, data = dat)
+jn3  <- JN(fit3, theta_1 = "x", theta_2 = "z", theta_3 = "w",
+           range_size = 20)
+jn3
+```
+
+Each of the three variables takes its turn as the focal one, moderated by the
+other two jointly. `print()` and `summary()` slice the grid at a few values of
+the first moderator to keep the report readable; `summary(jn3, at = ...)` and
+`jn_regions(jn3, at = ...)` let you choose those slices yourself.
+
+Here the grid is sampled rather than solved, so `range_size` does matter: it
+sets the resolution in each dimension. The default is finer than the 20 used
+above, which is set low here only to keep the vignette quick.
+
+```{r fig.width = 6, fig.height = 5, fig.alt = "Heatmap of the conditional effect of x over the two-dimensional grid of z and w, crosshatched where the effect is not significant, with marginal histograms of observed values along both axes."}
+plot(jn3, which = "x")
+```
+
+The heatmap shows the conditional effect over the grid, crosshatched where it is
+not distinguishable from zero, with the observed values of both moderators along
+the margins.
+
+Testing every cell of a grid is a lot of tests. `control_fdr = TRUE` applies the
+Benjamini-Hochberg step-up procedure across the grid, controlling the false
+discovery rate:
+
+```{r}
+jn3_fdr <- JN(fit3, theta_1 = "x", theta_2 = "z", theta_3 = "w",
+              range_size = 20, control_fdr = TRUE)
+head(jn_regions(jn3_fdr), 3)
+```
+
+## Mixed-effects models
+
+**lme4** models work the same way. By default the analysis uses the fixed
+effects.
+
+```{r, eval = requireNamespace("lme4", quietly = TRUE)}
+d <- dat
+d$g <- rep(letters[1:5], each = 20)
+fit_mer <- lme4::lmer(y ~ x * z + (1 | g), data = d)
+JN(fit_mer, theta_1 = "x", theta_2 = "z")
+```
+
+`fixed_only = FALSE` adds one analysis per group, returning a `JN_list` that
+carries the same `print()`, `summary()` and `plot()` methods as a single result.
+Note that this uses the conditional modes, which are predictions rather than
+estimates, so the group-level analyses are descriptive.
+
+## Bayesian models
+
+Hand `JN()` a matrix of posterior draws — or an `mcmc` object, an `mcmc.list`,
+or a data frame — and the analysis is carried out on conditional posteriors
+instead of Wald tests. Columns are matched by name, using the same `x:z`
+convention.
+
+```{r bayes, eval = requireNamespace("MCMCpack", quietly = TRUE), message = FALSE}
+post <- MCMCpack::MCMCregress(y ~ x * z, data = dat,
+                              burnin = 500, mcmc = 2000, verbose = 0)
+
+jnb <- JN(post, theta_1 = "x", theta_2 = "z",
+          theta_1_vals = seq(-3, 3, 0.5),
+          theta_2_vals = seq(-3, 3, 0.5))
+jnb
+```
+
+Nothing about the call changed except the object. Extra columns that are not
+part of the interaction — the intercept and `sigma2` here — are ignored.
+
+Because a matrix of draws carries no record of the data behind it, the regions
+come without a `data_share` and the figures without their histograms. Pass the
+observed moderator values through `support` to get both back.
+
+A two-way Bayesian analysis can be drawn two ways. The default overlays the
+conditional posterior densities:
+
+```{r, eval = requireNamespace("MCMCpack", quietly = TRUE), fig.alt = "Overlaid conditional posterior densities of the effect of x at a sequence of values of z."}
+plot(jnb, which = "x")
+```
+
+`type = "band"` gives the posterior mean with its credible band against the
+moderator, which is directly comparable to the frequentist figure:
+
+```{r, eval = requireNamespace("MCMCpack", quietly = TRUE), fig.alt = "Posterior mean effect of x across the range of z with a shaded credible band."}
+plot(jnb, which = "x", type = "band")
+```
+
+The `thresholds` argument sets the posterior quantiles that decide
+significance. The default is `c(0.025, 0.975)`, the Bayesian counterpart of a
+two-sided test at `alpha = 0.05`. If you are reproducing results from version
+1.0.x, be aware that the old `JNK_bayes()` default was effectively
+`c(0.5, 0.5)`, which marked very nearly every cell significant.
+
+## Appearance and saving
+
+`jn_style()` collects the colour, pattern and density-panel settings in one
+place, and is passed to `plot()`, `autoplot()` and `jn_plots()`:
+
+```{r fig.alt = "The same conditional effect plot for x, drawn in different colours and without the data-density panel."}
+plot(jn2, which = "x",
+     style = jn_style(sig_color = "steelblue", non_sig_color = "grey70",
+                      show_density = FALSE))
+```
+
+The figures are ordinary **ggplot2** objects, so you can extend them with `+`
+in the usual way. `jn_plots()` returns every figure of an analysis at once
+without drawing them, `autoplot()` returns a single one, and `jn_save()` writes
+them all to disk:
+
+```{r}
+figs <- jn_plots(jn2)
+names(figs)
+```
+
+```{r eval = FALSE}
+jn_save(jn2, folder = "figures", device = "pdf")
+```
+
+## Stochastic actor-oriented models
+
+**RSiena** and **multiSiena** results are handled directly. Effects are
+addressed by integer position rather than by name, because effect names are not
+unique within a SAOM; if a position is out of range, the error lists the
+available effects.
+
+```{r eval = FALSE}
+# siena07() results carry estimates and a covariance matrix -> Wald tests
+JN(saom_fit, theta_1 = 4, theta_2 = 7, theta_int_12 = 12,
+   theta_1_vals = c(0, 6), theta_2_vals = c(-2, 2))
+
+# sienaBayes() results carry draws -> conditional posteriors
+JN(bayes_fit, theta_1 = 4, theta_2 = 7, theta_int_12 = 12,
+   theta_1_vals = seq(0, 6, 1), theta_2_vals = seq(-2, 2, 1))
+```
+
+For `sienaBayes()` results the package works out for itself whether each
+parameter was estimated as shared across groups (`Eta`) or as varying between
+them (`Mu`), takes the corresponding draws, and reports which it used in
+`print()`, `summary()` and on the figures. `hyper_only = FALSE` adds one
+analysis per group, as `fixed_only = FALSE` does for **lme4**; it is skipped,
+with a message, when no parameter involved varies between groups, since the
+group analyses would be identical copies of the population one.
+
+## Supporting a further model class
+
+`JN()` works on anything with a `jn_input()` method. Writing one means returning
+either point estimates with their covariance matrix, through `jn_wald()`, or a
+matrix of draws, through `jn_posterior()`:
+
+```{r eval = FALSE}
+jn_input.myfit <- function(object, theta_1, theta_2, theta_3 = NULL, ...) {
+  idx <- c(theta_1, theta_2, paste(theta_1, theta_2, sep = ":"))
+  jn_wald(coefficients = object$estimates[idx],
+          vcov         = object$covariance[idx, idx],
+          labels       = c(theta_1, theta_2))
+}
+```
+
+Nothing else has to change: `print()`, `summary()`, `plot()` and the rest work
+on the result immediately. This is also the route for models fitted by
+variational inference, where the variational parameters approximate a posterior
+and `jn_posterior()` is the natural return.
+
+## Migrating from 1.0.x
+
+`JNK_freq()` and `JNK_bayes()` are deprecated in favour of `JN()`. They still
+work, delegate to `JN()`, return the 1.0.x list layout and warn once per
+session. They will be removed in a future release.
+
+**Two-way frequentist results from version 1.0.x should be regenerated.** Those
+versions computed the variance of the conditional effect using the covariance
+between the two main effects, where the delta method calls for the covariance
+between the focal main effect and the interaction. Confidence bands, `p` values
+and therefore the regions of significance of every two-way frequentist analysis
+are affected. Three-way analyses and all Bayesian analyses were computed
+correctly and are unchanged. See `NEWS.md` for the full list of changes.
+
+## References
+
+Johnson PO, Neyman J (1936). "Tests of Certain Linear Hypotheses and Their
+Application to Some Educational Problems." *Statistical Research Memoirs*, 1,
+57-93.
+
+Johnson PO, Fay LC (1950). "The Johnson-Neyman Technique, Its Theory and
+Application." *Psychometrika*, 15(4), 349-367.
+[doi:10.1007/BF02288864](https://doi.org/10.1007/BF02288864)
+
+Bauer DJ, Curran PJ (2005). "Probing Interactions in Fixed and Multilevel
+Regression: Inferential and Graphical Techniques." *Multivariate Behavioral
+Research*, 40(3), 373-400.
+[doi:10.1207/s15327906mbr4003_5](https://doi.org/10.1207/s15327906mbr4003_5)
+
+Krause RW (2026). *int3ract: Johnson-Neyman Technique and its Three-Way
+Extension for Frequentist and Bayesian Models in R.* arXiv:2604.22051.
+[doi:10.48550/arXiv.2604.22051](https://doi.org/10.48550/arXiv.2604.22051)
