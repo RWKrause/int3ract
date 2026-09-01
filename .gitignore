@@ -51,8 +51,6 @@ po/*~
 # RStudio Connect folder
 rsconnect/
 
-# paper sources kept in the repo but out of the package
-/paper/*_files/
 
 # stray device output
 Rplots.pdf
