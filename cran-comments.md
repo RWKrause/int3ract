@@ -1,13 +1,13 @@
 ## Test environments
 
 * Windows 11, R 4.6.1 (local)
-* macOS 26.6, arm64, R 4.6.1 (macOS builder) -- Status: OK
-* win-builder, R-devel -- submitted 2026-09-01, result pending
-* win-builder, R-release -- submitted 2026-09-01, result pending
+* win-builder, R-devel (2026-08-31 r90457 ucrt)
+* win-builder, R-release
+* macOS builder, macOS 26.6, arm64, R 4.6.1
 
 ## R CMD check results
 
-0 errors | 0 warnings | 0 notes on the two environments reported above.
+0 errors | 0 warnings | 0 notes on the three environments reported above.
 
 ## Notes on this submission
 
