@@ -1,3 +1,27 @@
+# int3ract 2.1.0
+
+## New features
+
+* Structural equation and path models fitted with `lavaan` are supported.
+  A structural model usually has several endogenous variables, and the same
+  interaction may predict more than one of them with different coefficients,
+  so the new `outcome` argument names the dependent variable whose regression
+  is wanted. It may be omitted when only one outcome is regressed on all of
+  the focal variables; when several are, `JN()` stops and lists them rather
+  than guessing.
+
+  `lavaan` writes two-way products as `x:z` in its own syntax and those are
+  found automatically, but it does not accept three-way products at all: those
+  have to be built as variables in the data, and their names passed as
+  `theta_int_12`, `theta_int_13`, `theta_int_23` and `theta_int_123`.
+
+  Latent outcomes need nothing special. Multiple-group fits are declined
+  rather than pooled, since each group carries its own structural
+  coefficients, and `blavaan` fits are declined with a pointer to passing
+  their draws, since a Wald test on posterior means would discard the
+  posterior.
+
+
 # int3ract 2.0.0
 
 ## Bug fix

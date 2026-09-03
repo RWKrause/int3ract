@@ -180,8 +180,9 @@ grid, referred to here as JN3.
 \details{
 \code{JN()} dispatches on \code{object}. Fitted models carrying point
 estimates and a covariance matrix (\code{lm}, \code{glm}, \code{lmerMod},
-\code{sienaFit}, ...) are analysed with Wald \eqn{z} tests; objects carrying
-draws (a posterior matrix, \code{mcmc}, \code{sienaBayesFit}, ...) are
+\code{lavaan}, \code{sienaFit}, ...) are analysed with Wald \eqn{z} tests;
+objects carrying draws (a posterior matrix, \code{mcmc},
+\code{sienaBayesFit}, ...) are
 analysed as conditional posterior distributions with Bayesian \eqn{p}
 values. Both paths return an object of class \code{JN} with the same set of
 methods.

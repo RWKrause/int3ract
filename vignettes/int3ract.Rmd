@@ -173,6 +173,65 @@ carries the same `print()`, `summary()` and `plot()` methods as a single result.
 Note that this uses the conditional modes, which are predictions rather than
 estimates, so the group-level analyses are descriptive.
 
+## Structural equation and path models
+
+`lavaan` fits go the same route, with one extra question to answer. A
+regression has one dependent variable; a structural model usually has several,
+and the same interaction may predict more than one of them with quite different
+coefficients. `outcome` says which equation to analyse.
+
+```{r, eval = requireNamespace("lavaan", quietly = TRUE), message = FALSE}
+sem_dat <- dat
+sem_dat$y1 <- dat$x + 0.5 * dat$z + 0.6 * dat$x * dat$z + rnorm(100)
+sem_dat$y2 <- -dat$x + 0.3 * dat$z - 0.4 * dat$x * dat$z + rnorm(100)
+
+fit_sem <- lavaan::sem("y1 ~ x + z + x:z
+                        y2 ~ x + z + x:z", data = sem_dat)
+
+JN(fit_sem, theta_1 = "x", theta_2 = "z", outcome = "y1")
+```
+
+The two equations share the same interaction term and disagree about its sign,
+so picking the wrong outcome is not a harmless mistake:
+
+```{r, eval = requireNamespace("lavaan", quietly = TRUE)}
+jn_regions(JN(fit_sem, theta_1 = "x", theta_2 = "z", outcome = "y2"))
+```
+
+Leave `outcome` out and, if more than one dependent variable is regressed on
+both focal variables, `JN()` stops and lists them rather than picking one. When
+only a single outcome qualifies it is used automatically, so the argument is
+only needed where it is genuinely ambiguous.
+
+The observed values come from the fit, so the density panels work as they do
+for `lm`. A model estimated from a sample covariance matrix carries no raw
+data; there the panels are absent and you supply `theta_1_vals` and
+`theta_2_vals` yourself.
+
+Two lavaan-specific points are worth knowing. Latent outcomes need nothing
+special -- `F ~ x + z + x:z` is analysed exactly like an observed one, and the
+moderators keep their density panels as long as they are observed. And while
+lavaan writes two-way products as `x:z` in its own syntax, it does not accept
+three-way products at all: those must be built as variables in the data, and
+their names passed through `theta_int_12`, `theta_int_13`, `theta_int_23` and
+`theta_int_123`.
+
+```{r eval = FALSE}
+dat$xz <- dat$x * dat$z
+dat$xw <- dat$x * dat$w
+dat$zw <- dat$z * dat$w
+dat$xzw <- dat$x * dat$z * dat$w
+
+fit3 <- lavaan::sem("y ~ x + z + w + xz + xw + zw + xzw", data = dat)
+JN(fit3, theta_1 = "x", theta_2 = "z", theta_3 = "w",
+   theta_int_12 = "xz", theta_int_13 = "xw",
+   theta_int_23 = "zw", theta_int_123 = "xzw")
+```
+
+Multiple-group fits are refused rather than pooled: each group has its own
+structural coefficients, so there is no single regression to analyse. Fit the
+groups separately and call `JN()` on each.
+
 ## Bayesian models
 
 Hand `JN()` a matrix of posterior draws — or an `mcmc` object, an `mcmc.list`,

@@ -1,25 +1,19 @@
 ## Test environments
 
 * Windows 11, R 4.6.1 (local)
-* win-builder, R-devel (2026-08-31 r90457 ucrt)
-* win-builder, R-release
-* macOS builder, macOS 26.6, arm64, R 4.6.1
 
 ## R CMD check results
 
-0 errors | 0 warnings | 0 notes on the three environments reported above.
+0 errors | 0 warnings | 0 notes
 
 ## Notes on this submission
 
-* This is a major version. The user-facing interface is now the single generic
-  `JN()`, which dispatches on the fitted object. The previous entry points
-  `JNK_freq()` and `JNK_bayes()` are deprecated rather than removed: they still
-  work, delegate to `JN()`, return the old layout and warn once per session.
+* This is a feature release. It adds a `jn_input()` method for `lavaan`
+  structural equation and path models, with a new `outcome` argument naming
+  the dependent variable whose regression is to be analysed, since a
+  structural model usually has more than one. Nothing in the existing
+  interface changes and no existing behaviour is affected.
 
-* It also fixes a bug in the two-way standard errors. Versions 1.0.x used the
-  covariance between the two main effects where the delta method calls for the
-  covariance between the focal main effect and the interaction, so two-way
-  frequentist results produced by those versions change. This is documented in
-  NEWS.md, in the README and in the new vignette.
+* `lavaan` is used only by that method, and is in Suggests.
 
 * There are no reverse dependencies.

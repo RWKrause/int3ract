@@ -58,10 +58,19 @@
 #'   the moderator range actually has. Supplying it is optional but strongly
 #'   recommended: a region of significance covering moderator values that were
 #'   barely observed is not evidence of much.
-#' @param theta_int_12,theta_int_13,theta_int_23,theta_int_123 positions of the
-#'   interaction parameters. Required for \code{sienaFit} and
-#'   \code{sienaBayesFit} input, where effects are addressed by position rather
-#'   than by name; optional for matrices of draws whose columns are named.
+#' @param theta_int_12,theta_int_13,theta_int_23,theta_int_123 the interaction
+#'   parameters. Required for \code{sienaFit} and \code{sienaBayesFit} input,
+#'   where effects are addressed by integer position rather than by name;
+#'   optional for matrices of draws whose columns are named. For \code{lavaan}
+#'   input they are term names, needed only when a product is not written in
+#'   lavaan's own \code{x:z} form -- which is always the case for three-way
+#'   interactions, since lavaan does not accept those in its model syntax.
+#' @param outcome for \code{lavaan} input, the dependent variable whose
+#'   regression is to be analysed. A structural model usually has several, and
+#'   the same interaction may predict more than one of them with different
+#'   coefficients. May be omitted when exactly one outcome is regressed on all
+#'   of the focal variables; when several are, \code{jn_input()} stops and
+#'   lists them rather than guessing.
 #' @param burn_in number of initial draws to discard.
 #' @param thin thinning interval applied after burn-in.
 #' @param ... passed to methods; ignored by the constructors.
@@ -203,8 +212,8 @@ jn_input.default <- function(object, ...) {
   stop("int3ract does not know how to extract Johnson-Neyman input from an ",
        "object of class ",
        paste(sQuote(class(object)), collapse = "/"), ".\n",
-       "Supported out of the box: lm, glm, lmerMod/glmerMod, sienaFit, ",
-       "matrix/mcmc of draws, and sienaBayesFit/multiSiena.\n",
+       "Supported out of the box: lm, glm, lmerMod/glmerMod, lavaan, ",
+       "sienaFit, matrix/mcmc of draws, and sienaBayesFit/multiSiena.\n",
        "For anything else, either build the input by hand with jn_wald() or ",
        "jn_posterior(), or write a jn_input() method for the class. ",
        "See ?jn_input.", call. = FALSE)
@@ -252,6 +261,167 @@ jn_input.merMod <- function(object, theta_1, theta_2, theta_3 = NULL, ...) {
 #' @rdname jn_input
 #' @export
 jn_input.lmerModLmerTest <- jn_input.merMod
+
+
+# ---- lavaan -----------------------------------------------------------------
+#
+# A structural model normally has several endogenous variables, so unlike a
+# regression there is no single "the" interaction to analyse: `x:z` may predict
+# two different outcomes with different coefficients. `outcome` names the
+# dependent variable whose regression is wanted. It may be omitted when only
+# one outcome is regressed on all of the focal variables, which is the case an
+# lm user would recognize.
+
+#' @rdname jn_input
+#' @export
+jn_input.lavaan <- function(object, theta_1, theta_2, theta_3 = NULL,
+                            outcome = NULL,
+                            theta_int_12 = NULL, theta_int_13 = NULL,
+                            theta_int_23 = NULL, theta_int_123 = NULL, ...) {
+  if (!requireNamespace("lavaan", quietly = TRUE))
+    stop("Package 'lavaan' is required for structural equation model input.",
+         call. = FALSE)
+  if (inherits(object, "blavaan"))
+    stop("A blavaan fit carries posterior draws, and analysing its posterior ",
+         "means with Wald tests would throw that away.\nExtract the draws ",
+         "(blavaan::blavInspect(object, \"draws\")) and pass the matrix to ",
+         "JN() instead.", call. = FALSE)
+
+  vars <- .jn_vars(theta_1, theta_2, theta_3)
+
+  if (lavaan::lavInspect(object, "ngroups") > 1L)
+    stop("Multiple-group lavaan fits are not supported: each group has its ",
+         "own structural coefficients, so there is no single regression to ",
+         "analyse.\nFit the groups separately and call JN() on each.",
+         call. = FALSE)
+
+  reg <- lavaan::parameterEstimates(object)
+  reg <- reg[reg$op == "~", , drop = FALSE]
+  if (!nrow(reg))
+    stop("This model has no regression paths (`~`), so it contains no ",
+         "interaction to analyse.", call. = FALSE)
+
+  outcome <- .jn_lavaan_outcome(reg, vars, outcome)
+  rhs     <- reg$rhs[reg$lhs == outcome]
+
+  # Main effects first: a missing one is a plainer problem than a missing
+  # product, and saying so beats a message about the interaction.
+  absent <- setdiff(vars, rhs)
+  if (length(absent))
+    stop("Outcome ", sQuote(outcome), " is not regressed on ",
+         paste(sQuote(absent), collapse = ", "),
+         ".\nIts predictors are: ", paste(sQuote(rhs), collapse = ", "), ".",
+         call. = FALSE)
+
+  terms <- c(vars, .jn_lavaan_ints(rhs, vars, theta_int_12, theta_int_13,
+                                   theta_int_23, theta_int_123))
+
+  named <- setdiff(terms, rhs)
+  if (length(named))
+    stop("Outcome ", sQuote(outcome), " is not regressed on ",
+         paste(sQuote(named), collapse = ", "),
+         ".\nIts predictors are: ", paste(sQuote(rhs), collapse = ", "), ".",
+         call. = FALSE)
+
+  # lavaan is S4, and stats::coef()/stats::vcov() called by name bypass its
+  # methods, so the estimates and their covariance are taken from lavaan's own
+  # accessors. Both label structural paths as "<outcome>~<term>".
+  idx <- paste0(outcome, "~", terms)
+  vc  <- as.matrix(lavaan::lavInspect(object, "vcov"))
+
+  fixed <- setdiff(idx, colnames(vc))
+  if (length(fixed))
+    stop("These paths are not freely estimated, so they carry no sampling ",
+         "variance: ", paste(sQuote(fixed), collapse = ", "),
+         ".\nA Johnson-Neyman analysis needs the covariance matrix of every ",
+         "term involved.", call. = FALSE)
+
+  rows <- match(terms, reg$rhs[reg$lhs == outcome])
+  cf   <- reg$est[reg$lhs == outcome][rows]
+  mf   <- .jn_lavaan_frame(object)
+
+  jn_wald(coefficients = cf,
+          vcov         = vc[idx, idx, drop = FALSE],
+          labels       = vars,
+          ranges       = .jn_ranges_from_frame(mf, vars),
+          support      = .jn_support_from_frame(mf, vars))
+}
+
+
+# Which dependent variable's regression to analyse. One candidate is
+# unambiguous; several is the normal SEM case and the caller has to choose.
+.jn_lavaan_outcome <- function(reg, vars, outcome) {
+  lhs <- unique(reg$lhs)
+
+  if (!is.null(outcome)) {
+    outcome <- as.character(outcome)
+    if (length(outcome) != 1L)
+      stop("`outcome` must name a single dependent variable, not ",
+           length(outcome), ".", call. = FALSE)
+    if (!outcome %in% lhs)
+      stop("Nothing is regressed on ", sQuote(outcome),
+           " in this model.\nIts outcomes are: ",
+           paste(sQuote(lhs), collapse = ", "), ".", call. = FALSE)
+    return(outcome)
+  }
+
+  cand <- lhs[vapply(lhs,
+                     function(o) all(vars %in% reg$rhs[reg$lhs == o]),
+                     logical(1))]
+
+  if (length(cand) == 1L) return(cand)
+  if (!length(cand))
+    stop("No outcome in this model is regressed on all of ",
+         paste(sQuote(vars), collapse = ", "), ".\nIts outcomes are: ",
+         paste(sQuote(lhs), collapse = ", "), ".", call. = FALSE)
+  stop(length(cand), " outcomes are regressed on ",
+       paste(sQuote(vars), collapse = ", "), ": ",
+       paste(sQuote(cand), collapse = ", "),
+       ".\nUse `outcome` to say which of them to analyse.", call. = FALSE)
+}
+
+
+# lavaan writes two-way products as "x:z" in its own syntax, so those are found
+# the usual way. It refuses three-way products outright -- they have to be
+# built as a variable in the data, under a name of the user's choosing -- so
+# for those the term name has to be supplied.
+.jn_lavaan_ints <- function(rhs, vars, i12, i13, i23, i123) {
+  pick <- function(given, arg, parts) {
+    if (!is.null(given)) return(as.character(given))
+    hit <- .find_int_quiet(rhs, parts)
+    if (!is.null(hit)) return(hit)
+    stop("No predictor matches the interaction of ",
+         paste(sQuote(parts), collapse = " and "), ".\n",
+         if (length(parts) == 3L)
+           paste0("lavaan does not accept three-way products in its model ",
+                  "syntax, so this term has to be built as a variable in the ",
+                  "data. Pass its name as `", arg, "`.\n")
+         else
+           paste0("lavaan writes this product as \"",
+                  paste(parts, collapse = ":"),
+                  "\"; if it is named differently, pass that name as `",
+                  arg, "`.\n"),
+         "Predictors available: ", paste(sQuote(rhs), collapse = ", "), ".",
+         call. = FALSE)
+  }
+
+  if (length(vars) == 2L)
+    return(pick(i12, "theta_int_12", vars[1:2]))
+
+  c(pick(i12,  "theta_int_12",  vars[c(1, 2)]),
+    pick(i13,  "theta_int_13",  vars[c(1, 3)]),
+    pick(i23,  "theta_int_23",  vars[c(2, 3)]),
+    pick(i123, "theta_int_123", vars[c(1, 2, 3)]))
+}
+
+
+# The observed data, when the fit carries any. Models estimated from a sample
+# covariance matrix carry none, and then the density panels are simply absent.
+.jn_lavaan_frame <- function(object) {
+  d <- try(lavaan::lavInspect(object, "data"), silent = TRUE)
+  if (inherits(d, "try-error") || is.null(d) || !length(d)) return(NULL)
+  as.data.frame(d, check.names = FALSE)
+}
 
 
 # ---- RSiena -----------------------------------------------------------------

@@ -8,6 +8,7 @@
 \alias{jn_input.lm}
 \alias{jn_input.merMod}
 \alias{jn_input.lmerModLmerTest}
+\alias{jn_input.lavaan}
 \alias{jn_input.sienaFit}
 \alias{jn_input.matrix}
 \alias{jn_input.mcmc}
@@ -30,6 +31,19 @@ jn_posterior(draws, labels, ranges = NULL, support = NULL)
 \method{jn_input}{merMod}(object, theta_1, theta_2, theta_3 = NULL, ...)
 
 \method{jn_input}{lmerModLmerTest}(object, theta_1, theta_2, theta_3 = NULL, ...)
+
+\method{jn_input}{lavaan}(
+  object,
+  theta_1,
+  theta_2,
+  theta_3 = NULL,
+  outcome = NULL,
+  theta_int_12 = NULL,
+  theta_int_13 = NULL,
+  theta_int_23 = NULL,
+  theta_int_123 = NULL,
+  ...
+)
 
 \method{jn_input}{sienaFit}(
   object,
@@ -137,10 +151,20 @@ involved in the interaction.}
 \item{theta_3}{the third variable, or \code{NULL} (default) for a two-way
 interaction.}
 
-\item{theta_int_12, theta_int_13, theta_int_23, theta_int_123}{positions of the
-interaction parameters. Required for \code{sienaFit} and
-\code{sienaBayesFit} input, where effects are addressed by position rather
-than by name; optional for matrices of draws whose columns are named.}
+\item{outcome}{for \code{lavaan} input, the dependent variable whose
+regression is to be analysed. A structural model usually has several, and
+the same interaction may predict more than one of them with different
+coefficients. May be omitted when exactly one outcome is regressed on all
+of the focal variables; when several are, \code{jn_input()} stops and
+lists them rather than guessing.}
+
+\item{theta_int_12, theta_int_13, theta_int_23, theta_int_123}{the interaction
+parameters. Required for \code{sienaFit} and \code{sienaBayesFit} input,
+where effects are addressed by integer position rather than by name;
+optional for matrices of draws whose columns are named. For \code{lavaan}
+input they are term names, needed only when a product is not written in
+lavaan's own \code{x:z} form -- which is always the case for three-way
+interactions, since lavaan does not accept those in its model syntax.}
 
 \item{burn_in}{number of initial draws to discard.}
 

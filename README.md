@@ -52,6 +52,30 @@ JN(post, theta_1 = "x", theta_2 = "z",
    theta_1_vals = seq(-3, 3, 0.5), theta_2_vals = seq(-3, 3, 0.5))
 ```
 
+## Structural equation and path models
+
+`lavaan` fits are handled directly. A structural model usually has several
+endogenous variables, so `outcome` says which equation to analyse; it can be
+omitted when only one outcome is regressed on both focal variables.
+
+```r
+fit <- lavaan::sem("y1 ~ x + z + x:z
+                    y2 ~ x + z + x:z", data = dat)
+
+JN(fit, theta_1 = "x", theta_2 = "z", outcome = "y1")
+```
+
+lavaan writes two-way products as `x:z` and those are found automatically. It
+does not accept three-way products in its syntax at all, so those must be built
+as variables in the data and named explicitly:
+
+```r
+dat$xz <- dat$x * dat$z   # and xw, zw, xzw
+JN(fit3, theta_1 = "x", theta_2 = "z", theta_3 = "w",
+   theta_int_12 = "xz", theta_int_13 = "xw",
+   theta_int_23 = "zw", theta_int_123 = "xzw")
+```
+
 ## Stochastic actor-oriented models
 
 `RSiena` and `multiSiena` results are handled directly. Effects are addressed
