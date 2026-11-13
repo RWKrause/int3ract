@@ -39,9 +39,10 @@ test_that("the evaluated range follows explicitly supplied moderator values", {
   jn <- JN(jn_test_draws(), theta_1 = "x", theta_2 = "z",
            theta_1_vals = seq(-3, 3, 0.5), theta_2_vals = c(-2, 2))
   s  <- summary(jn)
-  expect_equal(s$ranges$from, c(-3, -2))
-  expect_equal(s$ranges$to,   c(3, 2))
-  expect_equal(s$ranges$n[1], 13L)     # used verbatim
+  # a range is widened by `extend`; a list of values is used verbatim
+  expect_equal(s$ranges$from, c(-3, -2.4))
+  expect_equal(s$ranges$to,   c(3, 2.4))
+  expect_equal(s$ranges$n[1], 13L)
 })
 
 

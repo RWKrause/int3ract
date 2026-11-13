@@ -69,13 +69,82 @@ test_that("the posterior path summarizes the conditional draws it says it does",
 test_that("a length-two range is expanded and any other length is used verbatim", {
   d  <- jn_test_data()
   jn <- JN(lm(y ~ x * z, data = d), theta_1 = "x", theta_2 = "z",
-           theta_1_vals = c(-3, 3), theta_2_vals = c(-3, 3), range_size = 11)
+           theta_1_vals = c(-3, 3), theta_2_vals = c(-3, 3), range_size = 11,
+           extend = 0)
   expect_length(jn$grid$x, 11)
   expect_equal(range(jn$grid$x), c(-3, 3))
 
   jn2 <- JN(lm(y ~ x * z, data = d), theta_1 = "x", theta_2 = "z",
             theta_1_vals = c(-1, 0, 1), theta_2_vals = c(-1, 0, 1))
   expect_equal(jn2$grid$x, c(-1, 0, 1))
+})
+
+
+test_that("ranges are widened by `extend`, and the margin is flagged", {
+  d  <- jn_test_data()
+  jn <- JN(lm(y ~ x * z, data = d), theta_1 = "x", theta_2 = "z",
+           range_size = 101)
+  r  <- range(d$z)
+  expect_equal(range(jn$grid$z), r + c(-0.1, 0.1) * diff(r))
+  expect_equal(jn$observed_range$z, r)
+  tab <- jn$tables$x
+  expect_equal(tab$extrapolated, tab$mod_value < r[1] | tab$mod_value > r[2])
+  expect_true(any(tab$extrapolated) && !all(tab$extrapolated))
+
+  # supplied ranges are widened too; supplied values are not
+  jn2 <- JN(lm(y ~ x * z, data = d), theta_1 = "x", theta_2 = "z",
+            theta_1_vals = c(-2, 2), theta_2_vals = c(-1, 0, 1),
+            extend = 0.25)
+  expect_equal(range(jn2$grid$x), c(-3, 3))
+  expect_equal(jn2$grid$z, c(-1, 0, 1))
+
+  # extend = 0 gives the old grid exactly
+  jn0 <- JN(lm(y ~ x * z, data = d), theta_1 = "x", theta_2 = "z",
+            range_size = 101, extend = 0)
+  expect_equal(range(jn0$grid$z), r)
+  expect_false(any(jn0$tables$x$extrapolated))
+
+  expect_error(JN(lm(y ~ x * z, data = d), theta_1 = "x", theta_2 = "z",
+                  extend = -1), "non-negative")
+})
+
+
+test_that("binary variables are detected, evaluated at their levels only", {
+  d   <- jn_test_data()
+  d$b <- rep(c(0, 1), length.out = nrow(d))
+  jn  <- JN(lm(y ~ x * b, data = d), theta_1 = "x", theta_2 = "b")
+  expect_equal(unname(jn$binary), c(FALSE, TRUE))
+  expect_equal(jn$grid$b, c(0, 1))
+  expect_equal(nrow(jn$tables$x), 2L)
+  expect_false(any(jn$tables$x$extrapolated))
+
+  # without observed values a range c(0, 1) is a range unless declared binary
+  draws <- jn_test_draws()
+  jr <- JN(draws, theta_1 = "x", theta_2 = "z",
+           theta_1_vals = c(-1, 1), theta_2_vals = c(0, 1))
+  expect_gt(length(jr$grid$z), 2L)
+  jb <- JN(draws, theta_1 = "x", theta_2 = "z",
+           theta_1_vals = c(-1, 1), theta_2_vals = c(0, 1), binary = "z")
+  expect_equal(jb$grid$z, c(0, 1))
+
+  expect_error(JN(draws, theta_1 = "x", theta_2 = "z",
+                  theta_1_vals = c(-1, 1), theta_2_vals = c(0, 1),
+                  binary = "nope"), "not in the interaction")
+})
+
+
+test_that("regions along a binary moderator are its significant levels", {
+  set.seed(5)
+  d <- data.frame(x = rnorm(300), b = rbinom(300, 1, 0.5))
+  d$y <- 0.05 * d$x + 0.8 * d$x * d$b + rnorm(300)
+  jn  <- JN(lm(y ~ x * b, data = d), theta_1 = "x", theta_2 = "b")
+  reg <- jn_regions(jn)
+  rx  <- reg[reg$focal == "x", ]
+  expect_equal(rx$from, 1)
+  expect_equal(rx$to, 1)
+  expect_equal(rx$sign, "+")
+  expect_equal(rx$data_share, mean(d$b == 1))
+  expect_output(print(jn), "b = 1.000")
 })
 
 

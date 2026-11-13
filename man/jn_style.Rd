@@ -21,7 +21,13 @@ jn_style(
   density_fill = "grey70",
   density_color = "grey30",
   density_height = 0.28,
-  density_bins = 30
+  density_bins = 30,
+  extrap_alpha = 0.25,
+  pos_color = NULL,
+  neg_color = NULL,
+  shade_alpha = 0.35,
+  slope_shading = c("flat", "density"),
+  mode_color = "grey30"
 )
 }
 \arguments{
@@ -53,6 +59,26 @@ and is ignored when the analysis carries no observed values.}
 \item{density_height}{size of the density panels relative to the main panel.}
 
 \item{density_bins}{number of histogram bins in the density panels.}
+
+\item{extrap_alpha}{opacity of the parts of a figure lying beyond the
+observed range of the moderator, the margin added by the \code{extend}
+argument of \code{\link{JN}}. Lower is fainter; the observed part is drawn
+at 0.7 (bands) or 1 (heatmap tiles).}
+
+\item{pos_color, neg_color}{line and shading colour of the simple-slopes
+figure (\code{plot(type = "slopes")}) where the focal effect is
+significantly positive, respectively negative. Default to
+\code{color_high} and \code{color_low}, the ends of the heatmap scale.}
+
+\item{shade_alpha}{opacity of the shading between the simple slopes.}
+
+\item{slope_shading}{\code{"flat"} (the default) shades the region between
+the simple slopes uniformly; \code{"density"} makes the shading follow how
+many observations lie at each moderator value, so that the part of a
+region where most of the data sit stands out. Needs the observed values.}
+
+\item{mode_color}{colour of the simple slope drawn at the most common
+moderator value when the focal effect is significant throughout.}
 }
 \value{
 A list of settings, of class \code{jn_style}.

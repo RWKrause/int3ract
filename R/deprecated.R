@@ -89,7 +89,9 @@ JNK_freq <- function(x = NULL, theta_1, theta_2, theta_3 = NULL,
                theta_1_vals = theta_1_vals, theta_2_vals = theta_2_vals,
                theta_3_vals = theta_3_vals,
                alpha = alpha, control_fdr = control_fdr,
-               range_size = range_size)
+               range_size = range_size,
+               # the 1.x functions evaluated exactly the range given
+               extend = 0)
 
   res <- if (is.null(x) && !is.null(covar) && !is.null(coefs)) {
     labels <- name %||% (if (threeWay) c(theta_1, theta_2, theta_3)
@@ -214,7 +216,8 @@ JNK_bayes <- function(x, theta_1, theta_2, theta_3 = NULL,
   args <- list(theta_1 = theta_1, theta_2 = theta_2, theta_3 = theta_3,
                theta_1_vals = theta_1_vals, theta_2_vals = theta_2_vals,
                theta_3_vals = theta_3_vals,
-               thresholds = thresholds, thin = thin)
+               thresholds = thresholds, thin = thin,
+               extend = 0)
   if (!is.null(burn_in)) args$burn_in <- burn_in
 
   res <- if (inherits(x, c("multiSiena", "sienaBayesFit"))) {

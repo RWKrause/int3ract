@@ -27,30 +27,115 @@
 }
 
 
-# ---- moderator grids --------------------------------------------------------
+# ---- the canonical terms ----------------------------------------------------
 
-# A supplied vector of length two is read as a range and expanded to
-# `range_size` points; any other length is used verbatim, so that users can ask
-# for exactly the moderator values they care about.
-.jn_expand <- function(vals, range_size) {
-  vals <- as.numeric(vals)
-  if (length(vals) == 2L) seq(vals[1], vals[2], length.out = range_size)
-  else sort(unique(vals))
+# Which variables multiply together in each coefficient, in canonical order.
+.jn_terms <- function(k) {
+  if (k == 2L) list(1L, 2L, 1:2)
+  else         list(1L, 2L, 3L, 1:2, c(1L, 3L), 2:3, 1:3)
 }
 
-.jn_grid <- function(input, ranges, range_size) {
-  k     <- length(input$labels)
-  given <- input$ranges
+# Sum of b_S * prod(v_S) over the canonical terms: the part of the linear
+# predictor the interaction is responsible for. `v` is a matrix with one
+# column per variable.
+.jn_terms_sum <- function(b, v) {
+  v     <- as.matrix(v)
+  terms <- .jn_terms(ncol(v))
+  out   <- numeric(nrow(v))
+  for (t in seq_along(terms))
+    out <- out + b[t] * Reduce(`*`, lapply(terms[[t]], function(j) v[, j]))
+  out
+}
 
-  lapply(seq_len(k), function(i) {
-    v <- ranges[[i]] %||% given[[i]]
-    if (is.null(v))
-      stop("No values to evaluate ", sQuote(input$labels[i]), " over. ",
-           "This model class does not carry its data, so supply the ",
-           "moderator ranges explicitly, e.g. theta_", i,
-           "_vals = c(-3, 3).", call. = FALSE)
-    .jn_expand(v, range_size)
+# The conditional effect of variable i at the values `vals` of the others is
+# L'b, with L the derivative of the linear predictor in v_i. Returned as that
+# contrast vector so that it serves estimates, variances and draws alike.
+.jn_contrast <- function(k, i, vals) {
+  vapply(.jn_terms(k), function(S) {
+    if (i %in% S) prod(vals[setdiff(S, i)]) else 0
+  }, numeric(1))
+}
+
+
+# ---- moderator grids --------------------------------------------------------
+
+# A supplied vector of length two is read as a range, widened by `extend` times
+# its width on either side, and filled in with `range_size` points; any other
+# length is used verbatim, so that users can ask for exactly the moderator
+# values they care about. A binary variable is evaluated at its two values and
+# nothing else.
+.jn_expand <- function(vals, range_size, extend = 0, levels = NULL) {
+  if (!is.null(levels)) return(levels)
+  vals <- as.numeric(vals)
+  if (length(vals) == 2L) {
+    pad <- extend * abs(vals[2] - vals[1])
+    seq(min(vals) - pad, max(vals) + pad, length.out = range_size)
+  } else {
+    sort(unique(vals))
+  }
+}
+
+# Which variables are binary: named in `binary`, or observed at exactly two
+# distinct values.
+.jn_binary_flags <- function(input, binary) {
+  labels <- input$labels
+  if (!is.null(binary)) {
+    binary <- as.character(binary)
+    bad    <- setdiff(binary, labels)
+    if (length(bad))
+      stop("`binary` names variables that are not in the interaction: ",
+           paste(sQuote(bad), collapse = ", "), ".", call. = FALSE)
+  }
+  vapply(seq_along(labels), function(i) {
+    if (labels[i] %in% binary) return(TRUE)
+    obs <- input$support[[i]]
+    !is.null(obs) && length(unique(obs)) == 2L
+  }, logical(1))
+}
+
+.jn_values_for <- function(input, ranges, i) {
+  v <- ranges[[i]] %||% input$ranges[[i]]
+  if (is.null(v))
+    stop("No values to evaluate ", sQuote(input$labels[i]), " over. ",
+         "This model class does not carry its data, so supply the ",
+         "moderator ranges explicitly, e.g. theta_", i,
+         "_vals = c(-3, 3).", call. = FALSE)
+  as.numeric(v)
+}
+
+.jn_grid <- function(input, ranges, range_size, extend = 0,
+                     is_binary = rep(FALSE, length(input$labels))) {
+  lapply(seq_along(input$labels), function(i) {
+    v <- .jn_values_for(input, ranges, i)
+    .jn_expand(v, range_size, extend,
+               levels = if (is_binary[i]) .jn_levels(input, v, i))
   })
+}
+
+# The two values of a binary variable: as observed if known, else the ends of
+# whatever it was to be evaluated over.
+.jn_levels <- function(input, v, i) {
+  obs <- input$support[[i]]
+  lv  <- if (!is.null(obs)) sort(unique(obs)) else range(v)
+  if (length(lv) != 2L || lv[1] == lv[2])
+    stop(sQuote(input$labels[i]), " is treated as binary but does not take ",
+         "two distinct values.", call. = FALSE)
+  lv
+}
+
+# The range the data actually cover, as opposed to the one evaluated: the
+# observed values where known, otherwise the range supplied before widening.
+.jn_observed_ranges <- function(input, ranges) {
+  lapply(seq_along(input$labels), function(i) {
+    obs <- input$support[[i]]
+    if (!is.null(obs) && length(obs)) range(obs)
+    else range(.jn_values_for(input, ranges, i))
+  })
+}
+
+.jn_outside <- function(v, rng) {
+  tol <- 1e-8 * max(1, abs(rng))
+  v < rng[1] - tol | v > rng[2] + tol
 }
 
 
@@ -245,7 +330,7 @@
 
 # The single place where a jn_input becomes a JN object.
 .jn_build <- function(input, ranges, range_size, alpha, control_fdr,
-                      thresholds, group = NULL) {
+                      thresholds, group = NULL, extend = 0.1, binary = NULL) {
   k        <- length(input$labels)
   is_wald  <- inherits(input, "jn_wald")
 
@@ -256,7 +341,13 @@
       if (k == 2L) 13L else 50L
     }
 
-  grid <- .jn_grid(input, ranges, range_size)
+  if (!is.numeric(extend) || length(extend) != 1L || !is.finite(extend) ||
+      extend < 0)
+    stop("`extend` must be a single non-negative number.", call. = FALSE)
+
+  is_binary <- .jn_binary_flags(input, binary)
+  grid      <- .jn_grid(input, ranges, range_size, extend, is_binary)
+  observed  <- .jn_observed_ranges(input, ranges)
 
   cond <- NULL
   if (is_wald) {
@@ -272,6 +363,8 @@
     }
   }
 
+  tables <- .jn_flag_extrapolated(tables, input$labels, observed)
+
   structure(
     list(labels     = input$labels,
          n_way      = k,
@@ -280,6 +373,10 @@
          thresholds = thresholds,
          control_fdr = control_fdr,
          grid       = stats::setNames(grid, input$labels),
+         observed_range = stats::setNames(observed, input$labels),
+         binary     = stats::setNames(is_binary, input$labels),
+         extend     = extend,
+         range_size = range_size,
          support    = input$support,
          tables     = tables,
          cond_draws = cond,
@@ -288,4 +385,20 @@
     class = c(if (is_wald) "JN_wald" else "JN_posterior",
               if (k == 2L) "JN_2way" else "JN_3way",
               "JN"))
+}
+
+
+# Mark the grid points lying beyond the observed range of their moderator(s):
+# there the figures are extrapolating and draw themselves fainter.
+.jn_flag_extrapolated <- function(tables, labels, observed) {
+  rng <- function(nm) observed[[match(nm, labels)]]
+  lapply(tables, function(tab) {
+    tab$extrapolated <- if ("mod_value" %in% names(tab)) {
+      .jn_outside(tab$mod_value, rng(tab$moderator[1]))
+    } else {
+      .jn_outside(tab$mod1_value, rng(tab$mod1[1])) |
+        .jn_outside(tab$mod2_value, rng(tab$mod2[1]))
+    }
+    tab
+  })
 }

@@ -1,3 +1,56 @@
+# int3ract 2.2.0
+
+## New features
+
+* Simple-slopes figures: `plot(x, type = "slopes")` draws the regions of
+  significance in outcome space, for every kind of analysis. The focal
+  variable is on the x axis, the model's prediction of the outcome on the y
+  axis, and simple slopes are drawn at the moderator values bounding each
+  region, the fan between them shaded in the heatmap's positive (red) or
+  negative (blue) colour. That gives one dashed slope at the moderator mean
+  when the effect is nowhere significant, two slopes for a region of one sign,
+  and four for regions of both signs. An effect significant throughout gets
+  the slopes at the lowest and highest observed moderator values and a dotted
+  one at the most common value. Regions are computed over the observed
+  moderator values only. `jn_style(slope_shading = "density")` shades the fan
+  by how many observations lie at each moderator value.
+
+  Three-way analyses are drawn as slices: one panel per value of one
+  moderator (its quartiles by default, or the new `at` argument of `plot()`,
+  `autoplot()` and `jn_plots()`), each the two-way figure along the other.
+  For Wald analyses the boundaries within each panel are solved exactly.
+
+  The outcome axis is on the linear-predictor scale with other covariates at
+  their means. The constant this needs is extracted from `lm`, `glm`, `lme4`
+  and `lavaan` fits, and can be given to `jn_wald()` and `jn_posterior()`
+  through their new `intercept` and `outcome_label` arguments; without it the
+  axis is labelled as being up to a constant.
+
+* Binary moderators. A variable observed at exactly two values is evaluated
+  at those values only. Its two-way figure shows the conditional effect with
+  its interval at each value; its simple-slopes figure shows both slopes,
+  each marked significant or not. In a three-way analysis the heatmap is
+  replaced by the two-way figure along the other moderator, once for each
+  value of the binary one. `jn_regions()` and `summary()` report the values at
+  which the effect is significant. The new `binary` argument of `JN()` names
+  binary variables where the observed values are not available.
+
+* `JN()` gains `extend` (default 0.1): every moderator range, whether taken
+  from the data or supplied as a length-two `theta_*_vals`, is widened by this
+  fraction on either side. The margin is flagged in the new `extrapolated`
+  column of the result tables and drawn fainter in the figures
+  (`jn_style(extrap_alpha = )`), with the observed range marked. `summary()`
+  reports the observed range alongside the evaluated one.
+
+## Changes in default output
+
+* Because of `extend`, default grids now reach 10% beyond the observed (or
+  supplied) range, so regions of significance that ran to the edge of the
+  range may now extend further, and printed boundaries and grids differ from
+  2.1.0. `extend = 0` reproduces the earlier results exactly. The deprecated
+  `JNK_freq()` and `JNK_bayes()` keep their 1.x behaviour.
+
+
 # int3ract 2.1.0
 
 ## New features

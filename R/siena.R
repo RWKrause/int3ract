@@ -149,6 +149,7 @@ JN.sienaBayesFit <- function(object,
                              support = NULL,
                              alpha = 0.05, control_fdr = FALSE,
                              range_size = NULL, thresholds = NULL,
+                             extend = 0.1, binary = NULL,
                              hyper_only = TRUE, ...) {
 
   ranges     <- .jn_ranges_arg(theta_1_vals, theta_2_vals, theta_3_vals,
@@ -160,7 +161,8 @@ JN.sienaBayesFit <- function(object,
       input$support <- .jn_check_support(support, length(input$labels))
     .jn_build(input, ranges = ranges, range_size = range_size,
               alpha = alpha, control_fdr = control_fdr,
-              thresholds = thresholds, group = group)
+              thresholds = thresholds, group = group,
+              extend = extend, binary = binary)
   }
 
   input <- jn_input(object, theta_1 = theta_1, theta_2 = theta_2,

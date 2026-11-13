@@ -21,7 +21,7 @@ test_that("the deprecated wrapper agrees with JN() on the numbers", {
   fit <- lm(y ~ x * z, data = d)
   suppressWarnings(
     old <- JNK_freq(fit, theta_1 = "x", theta_2 = "z", range_size = 20))
-  new <- JN(fit, theta_1 = "x", theta_2 = "z", range_size = 20)
+  new <- JN(fit, theta_1 = "x", theta_2 = "z", range_size = 20, extend = 0)
 
   expect_equal(old$param_table$x$theta_vals, round(new$tables$x$estimate, 3))
   expect_equal(old$param_table$x$theta_se,   round(new$tables$x$std.error, 3))
@@ -41,7 +41,7 @@ test_that("JNK_freq() returns the 1.0.x three-way layout of matrices", {
   expect_equal(dim(old$thetas$x), c(8L, 8L))
 
   new <- JN(lm(y ~ x * z * w, data = d), theta_1 = "x", theta_2 = "z",
-            theta_3 = "w", range_size = 8)
+            theta_3 = "w", range_size = 8, extend = 0)
   # the matrix is the long grid folded back, row = mod1, column = mod2
   tab <- new$tables$x
   expect_equal(old$thetas$x[1, 1],

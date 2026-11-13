@@ -26,8 +26,9 @@ A data frame, respectively a named numeric vector and a matrix.
 }
 \description{
 \code{as.data.frame()} returns the full grid: one row per focal variable and
-moderator value, with the conditional estimate, its uncertainty, and whether
-it is significant. \code{coef()} and \code{vcov()} return the model
+moderator value, with the conditional estimate, its uncertainty, whether
+it is significant, and whether the moderator value lies beyond the observed
+data (\code{extrapolated}, the margin added by \code{extend}). \code{coef()} and \code{vcov()} return the model
 parameters the analysis was built from.
 }
 \examples{

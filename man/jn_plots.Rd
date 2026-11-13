@@ -4,16 +4,18 @@
 \alias{jn_plots}
 \title{Every figure of a Johnson-Neyman analysis}
 \usage{
-jn_plots(x, type = NULL, style = jn_style(), ...)
+jn_plots(x, type = NULL, style = jn_style(), at = NULL, ...)
 }
 \arguments{
 \item{x}{a \code{JN} object.}
 
-\item{type}{for posterior analyses, which quantity to draw; see
-\code{\link{plot.JN}}. Ignored for three-way posterior analyses, where
-both are returned.}
+\item{type}{which figure to draw; see \code{\link{plot.JN}}. For three-way
+posterior analyses both quantities are returned unless
+\code{type = "slopes"}.}
 
 \item{style}{appearance settings from \code{\link{jn_style}}.}
+
+\item{at}{passed to \code{\link{plot.JN}}.}
 
 \item{...}{ignored.}
 }
@@ -34,5 +36,9 @@ dat$y <- dat$x + 0.5 * dat$x * dat$z + rnorm(100)
 figs <- jn_plots(JN(lm(y ~ x * z, data = dat),
                     theta_1 = "x", theta_2 = "z"))
 names(figs)
+
+# the simple-slopes figures instead
+slopes <- jn_plots(JN(lm(y ~ x * z, data = dat),
+                      theta_1 = "x", theta_2 = "z"), type = "slopes")
 
 }

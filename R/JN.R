@@ -54,6 +54,19 @@
 #' @param thresholds two Bayesian \eqn{p} values bounding the region treated as
 #'   inconclusive; the conditional effect counts as significant outside them.
 #'   Defaults to \code{c(alpha/2, 1 - alpha/2)}.
+#' @param extend fraction of each moderator's range by which the evaluated
+#'   range is widened on either side, so that the figures show where a region
+#'   of significance would go just beyond the data. Applies to ranges taken
+#'   from the data and to ranges supplied as a length-two \code{theta_*_vals}
+#'   alike; values supplied verbatim (any other length) are left alone. Grid
+#'   points beyond the observed values are flagged in the \code{extrapolated}
+#'   column of the result tables and drawn fainter. Default 0.1; set to 0 to
+#'   evaluate exactly the given range.
+#' @param binary names of variables to treat as binary. Detected automatically
+#'   when the observed values are known and take exactly two distinct values;
+#'   needed otherwise, since a length-two \code{theta_*_vals} such as
+#'   \code{c(0, 1)} is read as a range. A binary variable is evaluated at its
+#'   two values only and never extended.
 #' @param ... passed to the \code{\link{jn_input}} method for \code{object}.
 #'
 #' @returns An object of class \code{JN}, with methods
@@ -112,6 +125,8 @@ JN.default <- function(object,
                        control_fdr = FALSE,
                        range_size = NULL,
                        thresholds = NULL,
+                       extend = 0.1,
+                       binary = NULL,
                        ...) {
   input <- jn_input(object,
                     theta_1 = theta_1, theta_2 = theta_2, theta_3 = theta_3,
@@ -125,7 +140,9 @@ JN.default <- function(object,
             range_size  = range_size,
             alpha       = alpha,
             control_fdr = control_fdr,
-            thresholds  = thresholds %||% c(alpha / 2, 1 - alpha / 2))
+            thresholds  = thresholds %||% c(alpha / 2, 1 - alpha / 2),
+            extend      = extend,
+            binary      = binary)
 }
 
 
@@ -135,7 +152,8 @@ JN.jn_input <- function(object,
                         theta_1_vals = NULL, theta_2_vals = NULL,
                         theta_3_vals = NULL,
                         alpha = 0.05, control_fdr = FALSE,
-                        range_size = NULL, thresholds = NULL, ...) {
+                        range_size = NULL, thresholds = NULL,
+                        extend = 0.1, binary = NULL, ...) {
   .jn_build(object,
             ranges      = .jn_ranges_arg(theta_1_vals, theta_2_vals,
                                          theta_3_vals,
@@ -144,7 +162,9 @@ JN.jn_input <- function(object,
             range_size  = range_size,
             alpha       = alpha,
             control_fdr = control_fdr,
-            thresholds  = thresholds %||% c(alpha / 2, 1 - alpha / 2))
+            thresholds  = thresholds %||% c(alpha / 2, 1 - alpha / 2),
+            extend      = extend,
+            binary      = binary)
 }
 
 
@@ -162,6 +182,7 @@ JN.merMod <- function(object,
                       support = NULL,
                       alpha = 0.05, control_fdr = FALSE,
                       range_size = NULL, thresholds = NULL,
+                      extend = 0.1, binary = NULL,
                       fixed_only = TRUE, group_var = NULL, ...) {
 
   fixed <- JN.default(object,
@@ -172,7 +193,8 @@ JN.merMod <- function(object,
                       theta_3_vals = theta_3_vals,
                       support = support, alpha = alpha,
                       control_fdr = control_fdr, range_size = range_size,
-                      thresholds = thresholds, ...)
+                      thresholds = thresholds, extend = extend,
+                      binary = binary, ...)
   if (fixed_only) return(fixed)
 
   groups <- .jn_lme4_groups(object, fixed, group_var)
@@ -203,6 +225,7 @@ JN.lmerModLmerTest <- JN.merMod
 
   gc_all <- stats::coef(object)[[group_var]]
   cn_all <- colnames(gc_all)
+  fe_all <- lme4::fixef(object)
   vars   <- fixed$labels
   wanted <- .jn_par_index(names(lme4::fixef(object)), vars)
 
@@ -219,18 +242,30 @@ JN.lmerModLmerTest <- JN.merMod
         else fixed$input$coefficients[j]
       }, numeric(1))
 
-      inp <- jn_wald(coefficients = b,
-                     vcov         = fixed$input$vcov,
-                     labels       = vars,
-                     ranges       = fixed$input$ranges,
-                     support      = fixed$input$support)
+      # the group's own intercept shifts the simple slopes, not their tests
+      icpt <- fixed$input$intercept
+      if (!is.null(icpt) && "(Intercept)" %in% cn_all &&
+          "(Intercept)" %in% names(fe_all))
+        icpt <- icpt + gc_all[g, "(Intercept)"] - fe_all[["(Intercept)"]]
+
+      inp <- jn_wald(coefficients  = b,
+                     vcov          = fixed$input$vcov,
+                     labels        = vars,
+                     ranges        = fixed$input$ranges,
+                     support       = fixed$input$support,
+                     intercept     = icpt,
+                     outcome_label = fixed$input$outcome)
+      # evaluated over exactly the fixed-effect grid, so that the groups are
+      # comparable with it and with each other
       res <- .jn_build(inp,
-                       ranges      = vector("list", length(vars)),
-                       range_size  = length(fixed$grid[[1]]),
+                       ranges      = lapply(fixed$grid, function(v) v),
+                       range_size  = fixed$range_size,
                        alpha       = fixed$alpha,
                        control_fdr = fixed$control_fdr,
                        thresholds  = fixed$thresholds,
-                       group       = g)
+                       group       = g,
+                       extend      = 0,
+                       binary      = fixed$labels[fixed$binary])
       res
     }),
     rownames(gc_all))

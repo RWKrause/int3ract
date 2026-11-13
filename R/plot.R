@@ -31,6 +31,21 @@
 #' @param density_fill,density_color fill and outline of the density panels.
 #' @param density_height size of the density panels relative to the main panel.
 #' @param density_bins number of histogram bins in the density panels.
+#' @param extrap_alpha opacity of the parts of a figure lying beyond the
+#'   observed range of the moderator, the margin added by the \code{extend}
+#'   argument of \code{\link{JN}}. Lower is fainter; the observed part is drawn
+#'   at 0.7 (bands) or 1 (heatmap tiles).
+#' @param pos_color,neg_color line and shading colour of the simple-slopes
+#'   figure (\code{plot(type = "slopes")}) where the focal effect is
+#'   significantly positive, respectively negative. Default to
+#'   \code{color_high} and \code{color_low}, the ends of the heatmap scale.
+#' @param shade_alpha opacity of the shading between the simple slopes.
+#' @param slope_shading \code{"flat"} (the default) shades the region between
+#'   the simple slopes uniformly; \code{"density"} makes the shading follow how
+#'   many observations lie at each moderator value, so that the part of a
+#'   region where most of the data sit stands out. Needs the observed values.
+#' @param mode_color colour of the simple slope drawn at the most common
+#'   moderator value when the focal effect is significant throughout.
 #'
 #' @returns A list of settings, of class \code{jn_style}.
 #'
@@ -59,9 +74,19 @@ jn_style <- function(sig_color = "seagreen3",
                      density_fill = "grey70",
                      density_color = "grey30",
                      density_height = 0.28,
-                     density_bins = 30) {
+                     density_bins = 30,
+                     extrap_alpha = 0.25,
+                     pos_color = "seagreen3",
+                     neg_color = "orangered4",
+                     shade_alpha = 0.35,
+                     slope_shading = c("flat", "density"),
+                     mode_color = "grey30") {
+  slope_shading <- match.arg(slope_shading)
   structure(as.list(environment()), class = "jn_style")
 }
+
+.jn_pos_color <- function(style) style$pos_color %||% style$color_high
+.jn_neg_color <- function(style) style$neg_color %||% style$color_low
 
 .jn_as_style <- function(style) {
   if (inherits(style, "jn_style")) return(style)
@@ -81,12 +106,20 @@ jn_style <- function(sig_color = "seagreen3",
 
 # A histogram hanging downwards from the top of its panel, so that it reads as
 # the base the plot above stands on rather than as a second plot.
-.jn_density_bottom <- function(obs, rng, label, style) {
-  ggplot2::ggplot(data.frame(value = obs), ggplot2::aes(x = .data$value)) +
+.jn_density_bottom <- function(obs, rng, label, style, binary = FALSE) {
+  bars <- if (binary) {
+    ggplot2::geom_bar(width = 0.1 * diff(range(obs)),
+                      fill = style$density_fill,
+                      colour = style$density_color,
+                      linewidth = 0.2)
+  } else {
     ggplot2::geom_histogram(bins = style$density_bins,
                             fill = style$density_fill,
                             colour = style$density_color,
-                            linewidth = 0.2) +
+                            linewidth = 0.2)
+  }
+  ggplot2::ggplot(data.frame(value = obs), ggplot2::aes(x = .data$value)) +
+    bars +
     ggplot2::scale_y_reverse(n.breaks = 3) +
     ggplot2::coord_cartesian(xlim = rng) +
     ggplot2::labs(x = label, y = "n") +
@@ -137,54 +170,103 @@ jn_style <- function(sig_color = "seagreen3",
 .jn_plot_2way_wald <- function(x, i, style) {
   tab <- x$tables[[i]]
   mod <- x$labels[3L - i]
+  d   <- data.frame(mod_value = tab$mod_value, est = tab$estimate,
+                    lo = tab$conf.low, hi = tab$conf.high,
+                    significant = tab$significant,
+                    extrapolated = tab$extrapolated)
 
-  p <- ggplot2::ggplot(tab, ggplot2::aes(.data$mod_value, .data$estimate)) +
-    ggplot2::geom_hline(yintercept = 0) +
-    ggplot2::theme_bw() +
+  .jn_plot_effect(d, style, binary = isTRUE(x$binary[[mod]]),
+                  obs_rng = x$observed_range[[mod]]) +
     ggplot2::labs(x = mod,
                   y = paste0("Conditional effect of ", x$labels[i]),
                   title = paste0("Moderation analysis for ", x$labels[i],
                                  .jn_group_suffix(x)))
-
-  # one ribbon per run of constant significance, so the colour change happens
-  # exactly at the boundary rather than being blended across it
-  runs   <- rle(tab$significant)
-  ends   <- cumsum(runs$lengths)
-  starts <- c(1L, utils::head(ends, -1L) + 1L)
-  for (r in seq_along(runs$values))
-    p <- p + ggplot2::geom_ribbon(
-      data = tab[starts[r]:ends[r], , drop = FALSE],
-      ggplot2::aes(ymin = .data$conf.low, ymax = .data$conf.high),
-      fill  = if (runs$values[r]) style$sig_color else style$non_sig_color,
-      alpha = 0.7)
-
-  p + ggplot2::geom_path(linewidth = 1, colour = style$line_color)
 }
 
 
 .jn_plot_2way_post_band <- function(x, i, style) {
   tab <- x$tables[[i]]
   mod <- x$labels[3L - i]
+  d   <- data.frame(mod_value = tab$mod_value, est = tab$post_mean,
+                    lo = tab$q2.5, hi = tab$q97.5,
+                    significant = tab$significant,
+                    extrapolated = tab$extrapolated)
 
-  p <- ggplot2::ggplot(tab, ggplot2::aes(.data$mod_value, .data$post_mean)) +
-    ggplot2::geom_hline(yintercept = 0) +
-    ggplot2::theme_bw() +
+  .jn_plot_effect(d, style, binary = isTRUE(x$binary[[mod]]),
+                  obs_rng = x$observed_range[[mod]]) +
     ggplot2::labs(x = mod,
                   y = paste0("Conditional effect of ", x$labels[i]),
                   title = paste0("Conditional posterior for ", x$labels[i],
                                  .jn_group_suffix(x)))
+}
 
-  runs   <- rle(tab$significant)
+
+# The conditional effect against its moderator, from a data frame holding the
+# moderator value, the estimate, its interval, and the significance and
+# extrapolation flags; an optional `panel` column facets it. A binary moderator
+# gets the estimate and its interval at each of its two values; anything else a
+# band shaded by significance and drawn fainter beyond the observed values.
+.jn_plot_effect <- function(d, style, binary, obs_rng = NULL) {
+  p <- ggplot2::ggplot(d, ggplot2::aes(.data$mod_value, .data$est)) +
+    ggplot2::geom_hline(yintercept = 0) +
+    ggplot2::theme_bw()
+  if (!is.null(d$panel))
+    p <- p + ggplot2::facet_wrap(ggplot2::vars(.data$panel), nrow = 1)
+
+  if (binary) {
+    d$sig_label <- factor(ifelse(d$significant, "significant",
+                                 "not significant"),
+                          levels = c("significant", "not significant"))
+    lv <- sort(unique(d$mod_value))
+    return(p +
+      ggplot2::geom_errorbar(data = d,
+                             ggplot2::aes(ymin = .data$lo, ymax = .data$hi,
+                                          colour = .data$sig_label),
+                             width = 0.08 * diff(range(lv)), linewidth = 0.8) +
+      ggplot2::geom_point(data = d, ggplot2::aes(colour = .data$sig_label),
+                          size = 2.5) +
+      ggplot2::scale_colour_manual(
+        values = c(significant = style$sig_color,
+                   `not significant` = style$non_sig_color),
+        drop = FALSE, name = NULL) +
+      ggplot2::scale_x_continuous(breaks = lv) +
+      ggplot2::expand_limits(x = lv + c(-0.25, 0.25) * diff(lv)) +
+      ggplot2::theme(legend.position = "bottom"))
+  }
+
+  # One ribbon per run of constant significance and extrapolation within a
+  # panel, so that colour and opacity change exactly at the boundary rather
+  # than being blended across it. Each run reaches to the first point of the
+  # next, so that coarse grids leave no gap.
+  panel  <- if (is.null(d$panel)) rep("", nrow(d)) else as.character(d$panel)
+  runs   <- rle(paste(panel, d$significant, d$extrapolated))
   ends   <- cumsum(runs$lengths)
   starts <- c(1L, utils::head(ends, -1L) + 1L)
-  for (r in seq_along(runs$values))
-    p <- p + ggplot2::geom_ribbon(
-      data = tab[starts[r]:ends[r], , drop = FALSE],
-      ggplot2::aes(ymin = .data$q2.5, ymax = .data$q97.5),
-      fill  = if (runs$values[r]) style$sig_color else style$non_sig_color,
-      alpha = 0.7)
 
-  p + ggplot2::geom_path(linewidth = 1, colour = style$line_color)
+  for (r in seq_along(runs$values)) {
+    s <- starts[r]; e <- ends[r]
+    ext <- d$extrapolated[s]
+    sig <- d$significant[s]
+    if (e < nrow(d) && panel[e + 1L] == panel[e]) e <- e + 1L
+    # a single point at the end of a panel reaches back instead
+    if (e == s && s > 1L && panel[s - 1L] == panel[s]) s <- s - 1L
+    run <- d[s:e, , drop = FALSE]
+    p <- p +
+      ggplot2::geom_ribbon(
+        data = run,
+        ggplot2::aes(ymin = .data$lo, ymax = .data$hi),
+        fill  = if (sig) style$sig_color else style$non_sig_color,
+        alpha = if (ext) style$extrap_alpha else 0.7) +
+      ggplot2::geom_path(data = run, linewidth = 1,
+                         colour = style$line_color,
+                         linetype = if (ext) "22" else "solid")
+  }
+
+  # mark where the data end, when the figure goes beyond them
+  if (any(d$extrapolated) && !is.null(obs_rng))
+    p <- p + ggplot2::geom_vline(xintercept = obs_rng, linetype = "dotted",
+                                 colour = "grey40")
+  p
 }
 
 
@@ -226,7 +308,11 @@ jn_style <- function(sig_color = "seagreen3",
   pat$pattern <- "crosshatch"
 
   p <- ggplot2::ggplot(tab, ggplot2::aes(.data$mod1_value, .data$mod2_value)) +
-    ggplot2::geom_tile(ggplot2::aes(fill = .data[[fill_var]])) +
+    ggplot2::geom_tile(ggplot2::aes(fill = .data[[fill_var]],
+                                    alpha = .data$extrapolated)) +
+    ggplot2::scale_alpha_manual(values = c(`FALSE` = 1,
+                                           `TRUE` = style$extrap_alpha),
+                                guide = "none") +
     ggplot2::scale_color_identity() +
     ggplot2::scale_fill_gradient2(low = style$color_low, mid = style$color_mid,
                                   high = style$color_high,
@@ -250,6 +336,16 @@ jn_style <- function(sig_color = "seagreen3",
       pattern_size    = style$grid_linewidth,
       alpha = 0)
 
+  # outline the observed part of the grid when the figure goes beyond it
+  if (any(tab$extrapolated)) {
+    r1 <- x$observed_range[[tab$mod1[1]]]
+    r2 <- x$observed_range[[tab$mod2[1]]]
+    p  <- p + ggplot2::annotate("rect", xmin = r1[1], xmax = r1[2],
+                                ymin = r2[1], ymax = r2[2], fill = NA,
+                                colour = "grey20", linetype = "dashed",
+                                linewidth = 0.4)
+  }
+
   # print the value in each cell only when the grid is coarse enough to read
   if (length(unique(tab$mod1_value)) < 8 &&
       length(unique(tab$mod2_value)) < 8)
@@ -258,6 +354,43 @@ jn_style <- function(sig_color = "seagreen3",
       colour = style$color_values, size = 2.5)
 
   p
+}
+
+
+# A three-way analysis in which a moderator is binary. A heatmap along an axis
+# with two values is no heatmap, so the two-way figure along the other
+# moderator is drawn once for each level of the binary one.
+.jn_plot_3way_binary <- function(x, i, style) {
+  tab  <- x$tables[[i]]
+  role <- .jn_3way_roles(x, i)
+  cv   <- paste0(role$cond, "_value")
+  rv   <- paste0(role$run,  "_value")
+  cnm  <- tab[[role$cond]][1]
+  rnm  <- tab[[role$run]][1]
+
+  if (x$inference == "wald") {
+    z   <- abs(stats::qnorm(x$alpha / 2))
+    est <- tab$estimate
+    lo  <- est - z * tab$std.error
+    hi  <- est + z * tab$std.error
+  } else {
+    est <- tab$post_mean; lo <- tab$q2.5; hi <- tab$q97.5
+  }
+  d <- data.frame(mod_value = tab[[rv]], est = est, lo = lo, hi = hi,
+                  significant = tab$significant,
+                  extrapolated = tab$extrapolated,
+                  level = tab[[cv]])
+  d  <- d[order(d$level, d$mod_value), , drop = FALSE]
+  lv <- sort(unique(d$level))
+  d$panel <- factor(paste(cnm, "=", .jn_fmt_value(d$level)),
+                    levels = paste(cnm, "=", .jn_fmt_value(lv)))
+
+  .jn_plot_effect(d, style, binary = isTRUE(x$binary[[rnm]]),
+                  obs_rng = x$observed_range[[rnm]]) +
+    ggplot2::labs(x = rnm,
+                  y = paste0(if (x$inference == "wald") "Conditional effect"
+                             else "Posterior mean", " of ", x$labels[i]),
+                  title = paste0(x$labels[i], .jn_group_suffix(x)))
 }
 
 
@@ -274,8 +407,10 @@ jn_style <- function(sig_color = "seagreen3",
   obs <- .jn_support_for(x, mod)
   if (!style$show_density || is.null(obs)) return(p)
 
-  rng  <- range(x$tables[[i]]$mod_value)
-  dens <- .jn_density_bottom(obs, rng, mod, style)
+  binary <- isTRUE(x$binary[[mod]])
+  rng    <- range(x$tables[[i]]$mod_value)
+  if (binary) rng <- rng + c(-0.25, 0.25) * diff(rng)
+  dens   <- .jn_density_bottom(obs, rng, mod, style, binary = binary)
 
   if (aligned) {
     # the main panel already carries the moderator on its x axis, so drop its
@@ -335,7 +470,30 @@ jn_style <- function(sig_color = "seagreen3",
 #' over the two-dimensional moderator grid, crosshatched where the effect is
 #' not significant; two-way posterior analyses give either overlaid conditional
 #' posterior densities or, with \code{type = "band"}, the posterior mean and
-#' credible band against the moderator.
+#' credible band against the moderator. Where a moderator is binary the
+#' two-way figure shows the effect with its interval at the two values, and a
+#' three-way heatmap becomes the two-way figure along the other moderator, once
+#' for each value of the binary one.
+#'
+#' With \code{type = "slopes"}, any analysis is drawn instead in outcome space:
+#' the focal variable on the x axis, the model's prediction of the outcome on
+#' the y axis, and simple slopes at the moderator values bounding each region
+#' of significance, the fan between them shaded in \code{pos_color} where the
+#' effect is significantly positive and \code{neg_color} where it is
+#' significantly negative. A focal effect that is nowhere significant gets one
+#' dashed slope at the moderator mean; one that is significant throughout gets
+#' the slopes at the lowest and highest observed moderator values plus a
+#' dotted one at the most common value. A binary moderator gets its two slopes,
+#' each marked as significant or not. The regions are computed over the
+#' observed moderator values only, so the fan never reaches into the margin
+#' added by \code{extend}. For three-way analyses the figure is faceted: one
+#' panel per value of one moderator (a binary one if there is one, otherwise
+#' the first, at \code{at}), each showing the two-way figure along the other.
+#' For Wald analyses the boundaries of every panel are solved for exactly. The
+#' outcome axis is on the model's scale -- the link scale for \code{glm} --
+#' with other covariates at their means, and is drawn up to an additive
+#' constant when the model does not supply its intercept (see
+#' \code{\link{jn_input}}).
 #'
 #' When the observed values of the moderators are known -- automatically for
 #' \code{lm}, \code{glm} and \pkg{lme4} models, and otherwise from the
@@ -357,8 +515,12 @@ jn_style <- function(sig_color = "seagreen3",
 #'   for overlaid conditional posteriors or \code{"band"} for the posterior
 #'   mean with its credible band; for three-way posterior analyses,
 #'   \code{"estimate"} (the default) for the posterior mean or \code{"bayes_p"}
-#'   for the Bayesian \eqn{p} value.
+#'   for the Bayesian \eqn{p} value. \code{"slopes"} draws the simple-slopes
+#'   figure for any analysis.
 #' @param style appearance settings from \code{\link{jn_style}}.
+#' @param at for three-way simple-slopes figures, the values of the moderator
+#'   to draw one panel at. Defaults to its quartiles; ignored when a moderator
+#'   is binary, whose two values are used.
 #' @param ... ignored.
 #'
 #' @returns Invisibly, the figure when a single \code{which} was given, and a
@@ -379,14 +541,22 @@ jn_style <- function(sig_color = "seagreen3",
 #' plot(jn, which = "x")     # just the one
 #' plot(jn, style = jn_style(show_density = FALSE))
 #'
+#' \donttest{
+#' # the regions of significance as simple slopes of the outcome
+#' plot(jn, which = "x", type = "slopes")
+#' plot(jn, which = "x", type = "slopes",
+#'      style = jn_style(slope_shading = "density"))
+#' }
+#'
 #' @export
-plot.JN <- function(x, which = NULL, type = NULL, style = jn_style(), ...) {
+plot.JN <- function(x, which = NULL, type = NULL, style = jn_style(),
+                    at = NULL, ...) {
   style <- .jn_as_style(style)
   idx   <- if (is.null(which)) seq_along(x$labels)
            else vapply(which, function(w) .jn_which(x, w), integer(1))
 
   figs <- stats::setNames(
-    lapply(idx, function(i) .jn_figure(x, i, type, style)),
+    lapply(idx, function(i) .jn_figure(x, i, type, style, at)),
     x$labels[idx])
 
   # More than one figure and a screen device: page through them, as plot.lm
@@ -403,7 +573,17 @@ plot.JN <- function(x, which = NULL, type = NULL, style = jn_style(), ...) {
 
 # Builds one figure. Everything about which figure to build lives here; whether
 # to draw it is the caller's business.
-.jn_figure <- function(x, i, type, style) {
+.jn_figure <- function(x, i, type, style, at = NULL) {
+  if (identical(type, "slopes"))
+    return(if (x$n_way == 2L) .jn_plot_2way_slopes(x, i, style)
+           else .jn_plot_3way_slopes(x, i, style, at))
+
+  if (x$n_way == 3L) {
+    tab <- x$tables[[i]]
+    if (isTRUE(x$binary[[tab$mod1[1]]]) || isTRUE(x$binary[[tab$mod2[1]]]))
+      return(.jn_plot_3way_binary(x, i, style))
+  }
+
   if (x$n_way == 2L) {
     if (x$inference == "wald") {
       .jn_compose_2way(.jn_plot_2way_wald(x, i, style), x, i, style,
@@ -449,10 +629,10 @@ ggplot2::autoplot
 #' @param object a \code{JN} object.
 #' @export
 autoplot.JN <- function(object, which = 1L, type = NULL,
-                        style = jn_style(), ...) {
+                        style = jn_style(), at = NULL, ...) {
   # autoplot() returns a figure rather than drawing one, so it takes a single
   # focal variable; use jn_plots() for all of them at once.
-  .jn_figure(object, .jn_which(object, which), type, .jn_as_style(style))
+  .jn_figure(object, .jn_which(object, which), type, .jn_as_style(style), at)
 }
 
 
@@ -477,10 +657,11 @@ plot.JN_list <- function(x, which = NULL, ...) {
 #' figures are wanted as objects, to arrange, modify or save.
 #'
 #' @param x a \code{JN} object.
-#' @param type for posterior analyses, which quantity to draw; see
-#'   \code{\link{plot.JN}}. Ignored for three-way posterior analyses, where
-#'   both are returned.
+#' @param type which figure to draw; see \code{\link{plot.JN}}. For three-way
+#'   posterior analyses both quantities are returned unless
+#'   \code{type = "slopes"}.
 #' @param style appearance settings from \code{\link{jn_style}}.
+#' @param at passed to \code{\link{plot.JN}}.
 #' @param ... ignored.
 #'
 #' @returns A named list of figures. For three-way posterior analyses the list
@@ -495,16 +676,21 @@ plot.JN_list <- function(x, which = NULL, ...) {
 #'                     theta_1 = "x", theta_2 = "z"))
 #' names(figs)
 #'
+#' # the simple-slopes figures instead
+#' slopes <- jn_plots(JN(lm(y ~ x * z, data = dat),
+#'                       theta_1 = "x", theta_2 = "z"), type = "slopes")
+#'
 #' @export
-jn_plots <- function(x, type = NULL, style = jn_style(), ...) {
+jn_plots <- function(x, type = NULL, style = jn_style(), at = NULL, ...) {
   stopifnot(inherits(x, "JN"))
   style <- .jn_as_style(style)
   one   <- function(tp)
     stats::setNames(lapply(seq_along(x$labels),
-                           function(i) .jn_figure(x, i, tp, style)),
+                           function(i) .jn_figure(x, i, tp, style, at)),
                     x$labels)
 
-  if (x$n_way == 3L && x$inference == "posterior")
+  if (x$n_way == 3L && x$inference == "posterior" &&
+      !identical(type, "slopes"))
     list(post_mean = one("estimate"), bayes_p = one("bayes_p"))
   else
     one(type)

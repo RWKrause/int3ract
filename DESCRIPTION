@@ -1,7 +1,7 @@
 Package: int3ract
 Type: Package
 Title: Johnson-Neyman Analysis of Two- and Three-Way Interactions
-Version: 2.1.0
+Version: 2.2.0
 Authors@R: c(
     person(
       "Robert W.", "Krause",

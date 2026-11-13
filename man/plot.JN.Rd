@@ -6,9 +6,9 @@
 \alias{plot.JN_list}
 \title{Plot a Johnson-Neyman analysis}
 \usage{
-\method{plot}{JN}(x, which = NULL, type = NULL, style = jn_style(), ...)
+\method{plot}{JN}(x, which = NULL, type = NULL, style = jn_style(), at = NULL, ...)
 
-\method{autoplot}{JN}(object, which = 1L, type = NULL, style = jn_style(), ...)
+\method{autoplot}{JN}(object, which = 1L, type = NULL, style = jn_style(), at = NULL, ...)
 
 \method{plot}{JN_list}(x, which = NULL, ...)
 }
@@ -24,9 +24,14 @@ analysis three.}
 for overlaid conditional posteriors or \code{"band"} for the posterior
 mean with its credible band; for three-way posterior analyses,
 \code{"estimate"} (the default) for the posterior mean or \code{"bayes_p"}
-for the Bayesian \eqn{p} value.}
+for the Bayesian \eqn{p} value. \code{"slopes"} draws the simple-slopes
+figure for any analysis.}
 
 \item{style}{appearance settings from \code{\link{jn_style}}.}
+
+\item{at}{for three-way simple-slopes figures, the values of the moderator
+to draw one panel at. Defaults to its quartiles; ignored when a moderator
+is binary, whose two values are used.}
 
 \item{...}{ignored.}
 
@@ -48,9 +53,32 @@ confidence band shaded by significance; three-way analyses give a heatmap
 over the two-dimensional moderator grid, crosshatched where the effect is
 not significant; two-way posterior analyses give either overlaid conditional
 posterior densities or, with \code{type = "band"}, the posterior mean and
-credible band against the moderator.
+credible band against the moderator. Where a moderator is binary the
+two-way figure shows the effect with its interval at the two values, and a
+three-way heatmap becomes the two-way figure along the other moderator, once
+for each value of the binary one.
 }
 \details{
+With \code{type = "slopes"}, any analysis is drawn instead in outcome space:
+the focal variable on the x axis, the model's prediction of the outcome on
+the y axis, and simple slopes at the moderator values bounding each region
+of significance, the fan between them shaded in \code{pos_color} where the
+effect is significantly positive and \code{neg_color} where it is
+significantly negative. A focal effect that is nowhere significant gets one
+dashed slope at the moderator mean; one that is significant throughout gets
+the slopes at the lowest and highest observed moderator values plus a
+dotted one at the most common value. A binary moderator gets its two slopes,
+each marked as significant or not. The regions are computed over the
+observed moderator values only, so the fan never reaches into the margin
+added by \code{extend}. For three-way analyses the figure is faceted: one
+panel per value of one moderator (a binary one if there is one, otherwise
+the first, at \code{at}), each showing the two-way figure along the other.
+For Wald analyses the boundaries of every panel are solved for exactly. The
+outcome axis is on the model's scale -- the link scale for \code{glm} --
+with other covariates at their means, and is drawn up to an additive
+constant when the model does not supply its intercept (see
+\code{\link{jn_input}}).
+
 When the observed values of the moderators are known -- automatically for
 \code{lm}, \code{glm} and \pkg{lme4} models, and otherwise from the
 \code{support} argument of \code{\link{JN}} -- a histogram of them is
@@ -71,5 +99,12 @@ jn <- JN(lm(y ~ x * z, data = dat), theta_1 = "x", theta_2 = "z")
 plot(jn)                 # both figures: x moderated by z, and z by x
 plot(jn, which = "x")     # just the one
 plot(jn, style = jn_style(show_density = FALSE))
+
+\donttest{
+# the regions of significance as simple slopes of the outcome
+plot(jn, which = "x", type = "slopes")
+plot(jn, which = "x", type = "slopes",
+     style = jn_style(slope_shading = "density"))
+}
 
 }

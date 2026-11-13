@@ -25,6 +25,8 @@ JN(object, ...)
   control_fdr = FALSE,
   range_size = NULL,
   thresholds = NULL,
+  extend = 0.1,
+  binary = NULL,
   ...
 )
 
@@ -37,6 +39,8 @@ JN(object, ...)
   control_fdr = FALSE,
   range_size = NULL,
   thresholds = NULL,
+  extend = 0.1,
+  binary = NULL,
   ...
 )
 
@@ -53,6 +57,8 @@ JN(object, ...)
   control_fdr = FALSE,
   range_size = NULL,
   thresholds = NULL,
+  extend = 0.1,
+  binary = NULL,
   fixed_only = TRUE,
   group_var = NULL,
   ...
@@ -71,6 +77,8 @@ JN(object, ...)
   control_fdr = FALSE,
   range_size = NULL,
   thresholds = NULL,
+  extend = 0.1,
+  binary = NULL,
   fixed_only = TRUE,
   group_var = NULL,
   ...
@@ -89,6 +97,8 @@ JN(object, ...)
   control_fdr = FALSE,
   range_size = NULL,
   thresholds = NULL,
+  extend = 0.1,
+  binary = NULL,
   hyper_only = TRUE,
   ...
 )
@@ -106,6 +116,8 @@ JN(object, ...)
   control_fdr = FALSE,
   range_size = NULL,
   thresholds = NULL,
+  extend = 0.1,
+  binary = NULL,
   hyper_only = TRUE,
   ...
 )
@@ -147,6 +159,21 @@ own conditional posterior.}
 \item{thresholds}{two Bayesian \eqn{p} values bounding the region treated as
 inconclusive; the conditional effect counts as significant outside them.
 Defaults to \code{c(alpha/2, 1 - alpha/2)}.}
+
+\item{extend}{fraction of each moderator's range by which the evaluated
+range is widened on either side, so that the figures show where a region
+of significance would go just beyond the data. Applies to ranges taken
+from the data and to ranges supplied as a length-two \code{theta_*_vals}
+alike; values supplied verbatim (any other length) are left alone. Grid
+points beyond the observed values are flagged in the \code{extrapolated}
+column of the result tables and drawn fainter. Default 0.1; set to 0 to
+evaluate exactly the given range.}
+
+\item{binary}{names of variables to treat as binary. Detected automatically
+when the observed values are known and take exactly two distinct values;
+needed otherwise, since a length-two \code{theta_*_vals} such as
+\code{c(0, 1)} is read as a range. A binary variable is evaluated at its
+two values only and never extended.}
 
 \item{fixed_only}{analyse only the fixed effects? When \code{FALSE}, a
 separate analysis is returned for every level of the grouping factor,

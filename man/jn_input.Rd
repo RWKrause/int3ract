@@ -20,9 +20,24 @@
 \usage{
 jn_input(object, ...)
 
-jn_wald(coefficients, vcov, labels, ranges = NULL, support = NULL)
+jn_wald(
+  coefficients,
+  vcov,
+  labels,
+  ranges = NULL,
+  support = NULL,
+  intercept = NULL,
+  outcome_label = NULL
+)
 
-jn_posterior(draws, labels, ranges = NULL, support = NULL)
+jn_posterior(
+  draws,
+  labels,
+  ranges = NULL,
+  support = NULL,
+  intercept = NULL,
+  outcome_label = NULL
+)
 
 \method{jn_input}{default}(object, ...)
 
@@ -140,6 +155,16 @@ variable, or \code{NULL}. Used to draw the data-density panels of
 the moderator range actually has. Supplying it is optional but strongly
 recommended: a region of significance covering moderator values that were
 barely observed is not evidence of much.}
+
+\item{intercept}{optional constant completing the linear predictor: the
+model intercept plus every covariate outside the interaction held at its
+mean. Only used to put the outcome axis of the simple-slopes figure
+(\code{plot(type = "slopes")}) on its natural scale; when \code{NULL} that
+axis is drawn up to an additive constant. Filled in automatically for
+\code{lm}, \code{glm}, \pkg{lme4} and \code{lavaan} models.}
+
+\item{outcome_label}{optional name of the outcome, used to label the outcome
+axis of the simple-slopes figure.}
 
 \item{draws}{matrix of draws with one row per iteration and one column per
 parameter, in the same canonical order.}

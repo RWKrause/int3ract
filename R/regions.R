@@ -133,6 +133,14 @@ jn_regions.JN_2way <- function(object, ...) {
     obs <- object$support[[mod]]
     m   <- tab$mod_value
 
+    if (isTRUE(object$binary[[mod]]))
+      return(.jn_regions_levels(tab, m,
+                                if (exact) tab$estimate else tab$post_mean,
+                                obs,
+                                data.frame(focal = object$labels[i],
+                                           moderator = object$labels[mod],
+                                           stringsAsFactors = FALSE)))
+
     iv <- if (exact) {
       V <- object$input$vcov; b <- object$input$coefficients
       .jn_exact_2way(b_main = b[i], b_int = b[3],
@@ -180,17 +188,29 @@ jn_regions.JN_2way <- function(object, ...) {
 jn_regions.JN_3way <- function(object, at = NULL, ...) {
   out <- lapply(seq_along(object$labels), function(i) {
     tab  <- object$tables[[i]]
-    m1   <- sort(unique(tab$mod1_value))
-    mod2 <- tab$mod2[1]
-    obs2 <- object$support[[match(mod2, object$labels)]]
+    role <- .jn_3way_roles(object, i)
+    cv   <- paste0(role$cond, "_value")      # conditioned on
+    rv   <- paste0(role$run,  "_value")      # region reported along
+    cnm  <- tab[[role$cond]][1]
+    rnm  <- tab[[role$run]][1]
+    obs2 <- object$support[[match(rnm, object$labels)]]
+    m1   <- sort(unique(tab[[cv]]))
 
     at_i <- at %||% stats::quantile(m1, c(0.25, 0.5, 0.75), names = FALSE)
     at_i <- vapply(at_i, function(a) m1[which.min(abs(m1 - a))], numeric(1))
     at_i <- unique(at_i)
 
     do.call(rbind, lapply(at_i, function(a) {
-      slice <- tab[tab$mod1_value == a, , drop = FALSE]
-      slice <- slice[order(slice$mod2_value), , drop = FALSE]
+      slice <- tab[tab[[cv]] == a, , drop = FALSE]
+      slice <- slice[order(slice[[rv]]), , drop = FALSE]
+      est   <- if (object$inference == "wald") slice$estimate
+               else slice$post_mean
+      lead  <- data.frame(focal = object$labels[i], mod1 = cnm,
+                          mod1_value = a, moderator = rnm,
+                          stringsAsFactors = FALSE)
+
+      if (isTRUE(object$binary[[rnm]]))
+        return(.jn_regions_levels(slice, slice[[rv]], est, obs2, lead))
 
       score <- if (object$inference == "wald") {
         abs(slice$statistic) - abs(stats::qnorm(object$alpha / 2))
@@ -198,36 +218,56 @@ jn_regions.JN_3way <- function(object, at = NULL, ...) {
         pmax(min(object$thresholds) - slice$bayes_p,
              slice$bayes_p - max(object$thresholds))
       }
-      iv <- .jn_runs(slice$mod2_value, score)
+      iv <- .jn_runs(slice[[rv]], score)
 
       if (!nrow(iv))
-        return(data.frame(focal = object$labels[i],
-                          mod1 = slice$mod1[1], mod1_value = a,
-                          moderator = mod2,
-                          from = NA_real_, to = NA_real_,
-                          sign = NA_character_, data_share = NA_real_,
-                          stringsAsFactors = FALSE))
+        return(cbind(lead, from = NA_real_, to = NA_real_,
+                     sign = NA_character_, data_share = NA_real_,
+                     stringsAsFactors = FALSE))
 
       mid <- (iv$from + iv$to) / 2
-      est <- stats::approx(slice$mod2_value,
-                           if (object$inference == "wald") slice$estimate
-                           else slice$post_mean,
-                           xout = mid, rule = 2)$y
+      e   <- stats::approx(slice[[rv]], est, xout = mid, rule = 2)$y
 
-      data.frame(focal      = object$labels[i],
-                 mod1       = slice$mod1[1],
-                 mod1_value = a,
-                 moderator  = mod2,
-                 from       = iv$from,
-                 to         = iv$to,
-                 sign       = ifelse(est > 0, "+", "-"),
-                 data_share = mapply(.jn_data_share,
-                                     list(obs2), iv$from, iv$to),
-                 stringsAsFactors = FALSE)
+      cbind(lead[rep(1L, nrow(iv)), , drop = FALSE],
+            from       = iv$from,
+            to         = iv$to,
+            sign       = ifelse(e > 0, "+", "-"),
+            data_share = mapply(.jn_data_share, list(obs2), iv$from, iv$to),
+            stringsAsFactors = FALSE)
     }))
   })
 
   res <- do.call(rbind, out)
   rownames(res) <- NULL
   res
+}
+
+
+# Which of the two moderators of a three-way table is conditioned on and which
+# the region runs along. A binary moderator is always the one conditioned on:
+# a region along a variable taking two values is not a region.
+.jn_3way_roles <- function(object, i) {
+  tab <- object$tables[[i]]
+  b1  <- isTRUE(object$binary[[tab$mod1[1]]])
+  b2  <- isTRUE(object$binary[[tab$mod2[1]]])
+  if (b2 && !b1) list(cond = "mod2", run = "mod1")
+  else           list(cond = "mod1", run = "mod2")
+}
+
+
+# Regions along a binary moderator are its levels at which the effect is
+# significant, each reported as a degenerate interval.
+.jn_regions_levels <- function(tab, m, est, obs, lead) {
+  keep <- which(tab$significant)
+  if (!length(keep))
+    return(cbind(lead, from = NA_real_, to = NA_real_, sign = NA_character_,
+                 data_share = NA_real_, stringsAsFactors = FALSE))
+  cbind(lead[rep(1L, length(keep)), , drop = FALSE],
+        from       = m[keep],
+        to         = m[keep],
+        sign       = ifelse(est[keep] > 0, "+", "-"),
+        data_share = if (is.null(obs)) NA_real_
+                     else vapply(m[keep], function(v) mean(obs == v),
+                                 numeric(1)),
+        stringsAsFactors = FALSE)
 }

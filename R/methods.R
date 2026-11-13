@@ -57,7 +57,11 @@ print.JN <- function(x, ...) {
 #'
 #' @returns An object of class \code{summary.JN}, holding the region table in
 #'   its \code{regions} element and the evaluated range of each variable in its
-#'   \code{ranges} element.
+#'   \code{ranges} element, next to the range its observed values cover
+#'   (\code{observed_from}, \code{observed_to}); the two differ by the margin
+#'   added by the \code{extend} argument of \code{\link{JN}}. Regions along a
+#'   binary moderator are its values at which the effect is significant, each
+#'   reported with \code{from} equal to \code{to}.
 #'
 #' @examples
 #' set.seed(1402)
@@ -76,10 +80,13 @@ summary.JN <- function(object, at = NULL, ...) {
 # The evaluated range of every variable, as a data frame so that it is
 # available to callers and not only to the printed output.
 .jn_ranges_table <- function(object) {
+  obs <- object$observed_range %||% lapply(object$grid, range)
   data.frame(variable = object$labels,
              from     = vapply(object$grid, min,    numeric(1)),
              to       = vapply(object$grid, max,    numeric(1)),
              n        = vapply(object$grid, length, integer(1)),
+             observed_from = vapply(obs, `[`, numeric(1), 1L),
+             observed_to   = vapply(obs, `[`, numeric(1), 2L),
              row.names        = NULL,
              stringsAsFactors = FALSE)
 }
@@ -109,7 +116,13 @@ print.summary.JN <- function(x, ...) {
     cat("  ", formatC(rng$variable[i], width = -w),
         "   [", trimws(.jn_fmt(rng$from[i])),
         ", ",   trimws(.jn_fmt(rng$to[i])), "]",
-        "   ", rng$n[i], " values\n", sep = "")
+        "   ", rng$n[i], " values",
+        if (!is.null(rng$observed_from) &&
+            (rng$from[i] < rng$observed_from[i] ||
+             rng$to[i]   > rng$observed_to[i]))
+          paste0("   (observed [", trimws(.jn_fmt(rng$observed_from[i])),
+                 ", ", trimws(.jn_fmt(rng$observed_to[i])), "])"),
+        "\n", sep = "")
   invisible(rng)
 }
 
@@ -160,14 +173,18 @@ print.summary.JN <- function(x, ...) {
   mod     <- sub$moderator[1]
   full    <- range(obj$grid[[match(mod, obj$labels)]])
   clipped <- FALSE
+  binary  <- isTRUE(obj$binary[[mod]])
 
   for (r in seq_len(nrow(sub))) {
     if (is.na(sub$from[r])) next
-    open_lo <- isTRUE(all.equal(sub$from[r], full[1]))
-    open_hi <- isTRUE(all.equal(sub$to[r],   full[2]))
+    # a binary moderator's regions are single values, never clipped
+    open_lo <- !binary && isTRUE(all.equal(sub$from[r], full[1]))
+    open_hi <- !binary && isTRUE(all.equal(sub$to[r],   full[2]))
     clipped <- clipped || open_lo || open_hi
 
-    where <- if (open_lo && open_hi) {
+    where <- if (binary) {
+      paste0(mod, " = ", trimws(.jn_fmt(sub$from[r])))
+    } else if (open_lo && open_hi) {
       paste0("the whole evaluated range of ", mod, " *")
     } else if (open_lo) {
       paste0(mod, " up to ", .jn_fmt(sub$to[r]), " *")
@@ -195,8 +212,9 @@ print.summary.JN <- function(x, ...) {
 #' Extract the conditional effects of a Johnson-Neyman analysis
 #'
 #' \code{as.data.frame()} returns the full grid: one row per focal variable and
-#' moderator value, with the conditional estimate, its uncertainty, and whether
-#' it is significant. \code{coef()} and \code{vcov()} return the model
+#' moderator value, with the conditional estimate, its uncertainty, whether
+#' it is significant, and whether the moderator value lies beyond the observed
+#' data (\code{extrapolated}, the margin added by \code{extend}). \code{coef()} and \code{vcov()} return the model
 #' parameters the analysis was built from.
 #'
 #' @param x a \code{JN} object.

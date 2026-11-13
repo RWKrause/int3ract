@@ -26,7 +26,11 @@ are not interpretable without it.}
 \value{
 An object of class \code{summary.JN}, holding the region table in
   its \code{regions} element and the evaluated range of each variable in its
-  \code{ranges} element.
+  \code{ranges} element, next to the range its observed values cover
+  (\code{observed_from}, \code{observed_to}); the two differ by the margin
+  added by the \code{extend} argument of \code{\link{JN}}. Regions along a
+  binary moderator are its values at which the effect is significant, each
+  reported with \code{from} equal to \code{to}.
 }
 \description{
 Reports the regions of significance: the stretches of the moderator over

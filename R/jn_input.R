@@ -71,6 +71,14 @@
 #'   coefficients. May be omitted when exactly one outcome is regressed on all
 #'   of the focal variables; when several are, \code{jn_input()} stops and
 #'   lists them rather than guessing.
+#' @param intercept optional constant completing the linear predictor: the
+#'   model intercept plus every covariate outside the interaction held at its
+#'   mean. Only used to put the outcome axis of the simple-slopes figure
+#'   (\code{plot(type = "slopes")}) on its natural scale; when \code{NULL} that
+#'   axis is drawn up to an additive constant. Filled in automatically for
+#'   \code{lm}, \code{glm}, \pkg{lme4} and \code{lavaan} models.
+#' @param outcome_label optional name of the outcome, used to label the outcome
+#'   axis of the simple-slopes figure.
 #' @param burn_in number of initial draws to discard.
 #' @param thin thinning interval applied after burn-in.
 #' @param ... passed to methods; ignored by the constructors.
@@ -105,7 +113,7 @@ jn_input <- function(object, ...) UseMethod("jn_input")
 #' @rdname jn_input
 #' @export
 jn_wald <- function(coefficients, vcov, labels, ranges = NULL,
-                    support = NULL) {
+                    support = NULL, intercept = NULL, outcome_label = NULL) {
   labels <- as.character(labels)
   k      <- length(labels)
   .jn_check_k(k)
@@ -129,14 +137,17 @@ jn_wald <- function(coefficients, vcov, labels, ranges = NULL,
          vcov         = vcov,
          labels       = labels,
          ranges       = .jn_check_ranges(ranges, k),
-         support      = .jn_check_support(support, k)),
+         support      = .jn_check_support(support, k),
+         intercept    = .jn_check_intercept(intercept),
+         outcome      = .jn_check_outcome(outcome_label)),
     class = c("jn_wald", "jn_input"))
 }
 
 
 #' @rdname jn_input
 #' @export
-jn_posterior <- function(draws, labels, ranges = NULL, support = NULL) {
+jn_posterior <- function(draws, labels, ranges = NULL, support = NULL,
+                         intercept = NULL, outcome_label = NULL) {
   labels <- as.character(labels)
   k      <- length(labels)
   .jn_check_k(k)
@@ -153,10 +164,12 @@ jn_posterior <- function(draws, labels, ranges = NULL, support = NULL) {
     stop("`draws` must not contain missing values.", call. = FALSE)
 
   structure(
-    list(draws   = draws,
-         labels  = labels,
-         ranges  = .jn_check_ranges(ranges, k),
-         support = .jn_check_support(support, k)),
+    list(draws     = draws,
+         labels    = labels,
+         ranges    = .jn_check_ranges(ranges, k),
+         support   = .jn_check_support(support, k),
+         intercept = .jn_check_intercept(intercept),
+         outcome   = .jn_check_outcome(outcome_label)),
     class = c("jn_posterior", "jn_input"))
 }
 
@@ -173,6 +186,22 @@ jn_posterior <- function(draws, labels, ranges = NULL, support = NULL) {
   if (!is.list(ranges) || length(ranges) != k)
     stop("`ranges` must be a list of length ", k, ".", call. = FALSE)
   lapply(ranges, function(r) if (is.null(r)) NULL else as.numeric(r))
+}
+
+.jn_check_intercept <- function(intercept) {
+  if (is.null(intercept)) return(NULL)
+  intercept <- suppressWarnings(as.numeric(intercept))
+  if (length(intercept) != 1L || !is.finite(intercept))
+    stop("`intercept` must be a single finite number.", call. = FALSE)
+  intercept
+}
+
+.jn_check_outcome <- function(outcome) {
+  if (is.null(outcome)) return(NULL)
+  outcome <- as.character(outcome)
+  if (length(outcome) != 1L || is.na(outcome))
+    stop("`outcome_label` must be a single string.", call. = FALSE)
+  outcome
 }
 
 .jn_check_support <- function(support, k) {
@@ -230,11 +259,14 @@ jn_input.lm <- function(object, theta_1, theta_2, theta_3 = NULL, ...) {
   idx  <- .jn_par_index(names(cf), vars)
   mf   <- object$model
 
-  jn_wald(coefficients = cf[idx],
-          vcov         = stats::vcov(object)[idx, idx, drop = FALSE],
-          labels       = vars,
-          ranges       = .jn_ranges_from_frame(mf, vars),
-          support      = .jn_support_from_frame(mf, vars))
+  jn_wald(coefficients  = cf[idx],
+          vcov          = stats::vcov(object)[idx, idx, drop = FALSE],
+          labels        = vars,
+          ranges        = .jn_ranges_from_frame(mf, vars),
+          support       = .jn_support_from_frame(mf, vars),
+          intercept     = .jn_intercept_from_fit(stats::predict(object),
+                                                 mf, vars, cf[idx]),
+          outcome_label = .jn_outcome_label(object))
 }
 
 
@@ -251,11 +283,16 @@ jn_input.merMod <- function(object, theta_1, theta_2, theta_3 = NULL, ...) {
   idx  <- .jn_par_index(names(fe), vars)
   mf   <- stats::model.frame(object)
 
-  jn_wald(coefficients = fe[idx],
-          vcov         = as.matrix(stats::vcov(object))[idx, idx, drop = FALSE],
-          labels       = vars,
-          ranges       = .jn_ranges_from_frame(mf, vars),
-          support      = .jn_support_from_frame(mf, vars))
+  eta  <- tryCatch(stats::predict(object, re.form = NA),
+                   error = function(e) NULL)
+
+  jn_wald(coefficients  = fe[idx],
+          vcov          = as.matrix(stats::vcov(object))[idx, idx, drop = FALSE],
+          labels        = vars,
+          ranges        = .jn_ranges_from_frame(mf, vars),
+          support       = .jn_support_from_frame(mf, vars),
+          intercept     = .jn_intercept_from_fit(eta, mf, vars, fe[idx]),
+          outcome_label = .jn_outcome_label(object))
 }
 
 #' @rdname jn_input
@@ -340,11 +377,34 @@ jn_input.lavaan <- function(object, theta_1, theta_2, theta_3 = NULL,
   cf   <- reg$est[reg$lhs == outcome][rows]
   mf   <- .jn_lavaan_frame(object)
 
-  jn_wald(coefficients = cf,
-          vcov         = vc[idx, idx, drop = FALSE],
-          labels       = vars,
-          ranges       = .jn_ranges_from_frame(mf, vars),
-          support      = .jn_support_from_frame(mf, vars))
+  jn_wald(coefficients  = cf,
+          vcov          = vc[idx, idx, drop = FALSE],
+          labels        = vars,
+          ranges        = .jn_ranges_from_frame(mf, vars),
+          support       = .jn_support_from_frame(mf, vars),
+          intercept     = .jn_lavaan_intercept(object, outcome, terms, mf),
+          outcome_label = outcome)
+}
+
+
+# The outcome's intercept plus every other regressor at its mean, so that the
+# simple-slopes figure is drawn on the outcome's own scale. Needs a mean
+# structure; without one the model says nothing about levels and NULL is
+# returned, which draws the figure up to a constant.
+.jn_lavaan_intercept <- function(object, outcome, terms, mf) {
+  pe  <- lavaan::parameterEstimates(object)
+  int <- pe$est[pe$op == "~1" & pe$lhs == outcome]
+  if (!length(int)) return(NULL)
+
+  reg    <- pe[pe$op == "~" & pe$lhs == outcome, , drop = FALSE]
+  others <- reg[!reg$rhs %in% terms, , drop = FALSE]
+  means  <- vapply(others$rhs, function(v) {
+    if (!is.null(mf) && v %in% names(mf))
+      return(mean(as.numeric(mf[[v]]), na.rm = TRUE))
+    m <- pe$est[pe$op == "~1" & pe$lhs == v]
+    if (length(m)) m[1] else 0        # latent, mean fixed at zero
+  }, numeric(1))
+  int[1] + sum(others$est * means)
 }
 
 
@@ -577,6 +637,32 @@ jn_input.data.frame <- function(object, ...) {
     r <- suppressWarnings(range(as.numeric(mf[[v]]), na.rm = TRUE))
     if (all(is.finite(r))) r else NULL
   })
+}
+
+# The constant completing the linear predictor: intercept plus every covariate
+# outside the interaction at its mean. Taken as the average of what the fitted
+# linear predictor leaves once the interaction terms are subtracted, which
+# handles covariates, factors and offsets without having to name any of them.
+.jn_intercept_from_fit <- function(eta, mf, vars, b) {
+  if (is.null(eta) || is.null(mf) || !all(vars %in% names(mf))) return(NULL)
+  v <- vapply(vars, function(nm) suppressWarnings(as.numeric(mf[[nm]])),
+              numeric(nrow(mf)))
+  if (length(eta) != nrow(v) || anyNA(v)) return(NULL)
+  rest <- as.numeric(eta) - .jn_terms_sum(b, v)
+  out  <- mean(rest)
+  if (is.finite(out)) out else NULL
+}
+
+# Name of the response, with the link where the linear predictor is not on the
+# response's own scale.
+.jn_outcome_label <- function(object) {
+  f   <- tryCatch(stats::formula(object), error = function(e) NULL)
+  if (is.null(f) || length(f) < 3L) return(NULL)
+  lab <- paste(deparse(f[[2L]]), collapse = "")
+  fam <- tryCatch(stats::family(object), error = function(e) NULL)
+  if (!is.null(fam) && fam$link != "identity")
+    lab <- paste0(lab, " (", fam$link, " scale)")
+  lab
 }
 
 .jn_support_from_frame <- function(mf, vars) {

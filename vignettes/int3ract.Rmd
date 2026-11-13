@@ -95,6 +95,41 @@ empirical support each part of the range has. Observed values are taken from
 supply them through the `support` argument. Turn the panels off with
 `jn_style(show_density = FALSE)`.
 
+The figure also runs a little past the data: by default `JN()` widens every
+moderator range by 10% on either side (`extend = 0.1`), and draws that margin
+fainter, with dotted lines where the observed values end. It shows where a
+region of significance would go next without pretending the data say so. The
+widening applies to ranges you supply as well; set `extend = 0` to evaluate
+exactly the range given.
+
+### Simple slopes
+
+The Johnson-Neyman figure is exact but abstract: its y axis is a slope. The
+same regions can be drawn in the outcome's own terms with `type = "slopes"`.
+The focal variable goes on the x axis, the model's prediction of the outcome on
+the y axis, and a simple slope is drawn at each moderator value bounding a
+region of significance. The fan between two bounding slopes is shaded red where
+the effect is significantly positive and blue where it is significantly
+negative, the colours of the heatmaps below; every slope inside it is
+significant.
+
+```{r fig.alt = "Simple slopes of y on x at the values of z bounding the region where the effect of x is significant, with the fan between them shaded."}
+plot(jn2, which = "x", type = "slopes")
+```
+
+A focal effect that is significant over one stretch of the moderator gives two
+slopes, one with a positive and a negative stretch gives four, and one that is
+nowhere significant a single dashed slope at the moderator's mean. When the
+effect is significant everywhere, the two slopes are those at the lowest and
+highest observed moderator values, with a dotted third at its most common
+value. The regions here are computed over the observed values only, so the fan
+never reaches into the margin added by `extend`. With
+`jn_style(slope_shading = "density")` the shading follows the distribution of
+the moderator, darkest where most observations lie.
+
+The outcome axis is on the scale of the linear predictor -- the link scale for
+`glm` models -- with any other covariates held at their means.
+
 ### Getting at the numbers
 
 `jn_regions()` returns the regions as a data frame, which is the form you want
@@ -144,7 +179,17 @@ plot(jn3, which = "x")
 
 The heatmap shows the conditional effect over the grid, crosshatched where it is
 not distinguishable from zero, with the observed values of both moderators along
-the margins.
+the margins. Cells in the `extend` margin are drawn faint, and a dashed
+rectangle marks the observed part of the grid.
+
+Simple slopes work here too, one panel per value of the first moderator -- its
+quartiles by default, or the values passed as `at` -- each showing the slopes
+of the focal variable along the second. Within a panel the problem is a
+two-way one again, and for Wald analyses its boundaries are solved exactly.
+
+```{r fig.width = 8, fig.height = 4, fig.alt = "Three panels of simple slopes of y on x, one at each quartile of z, bounding the regions of w where the effect of x is significant."}
+plot(jn3, which = "x", type = "slopes")
+```
 
 Testing every cell of a grid is a lot of tests. `control_fdr = TRUE` applies the
 Benjamini-Hochberg step-up procedure across the grid, controlling the false
@@ -232,6 +277,24 @@ Multiple-group fits are refused rather than pooled: each group has its own
 structural coefficients, so there is no single regression to analyse. Fit the
 groups separately and call `JN()` on each.
 
+## Binary moderators
+
+A moderator observed at exactly two values is recognized as binary and
+evaluated at those two values only, never widened. The two-way figure then
+shows the conditional effect with its interval at each value; the simple-slopes
+figure shows both slopes, each marked as significant or not. In a three-way
+interaction the binary variable becomes the one the figures are split by: two
+panels, one per value, each the two-way figure along the continuous moderator.
+Where the observed values are not available, name binary variables with
+`binary = "b"`: without it a supplied range `c(0, 1)` is read as a range.
+
+```{r fig.alt = "Simple slopes of y on x for the two groups of a binary moderator g, each marked as significant or not."}
+bdat <- data.frame(x = rnorm(200), g = rbinom(200, 1, 0.5))
+bdat$y <- bdat$x * bdat$g + rnorm(200)
+jn_g <- JN(lm(y ~ x * g, data = bdat), theta_1 = "x", theta_2 = "g")
+plot(jn_g, which = "x", type = "slopes")
+```
+
 ## Bayesian models
 
 Hand `JN()` a matrix of posterior draws — or an `mcmc` object, an `mcmc.list`,
@@ -295,6 +358,7 @@ them all to disk:
 ```{r}
 figs <- jn_plots(jn2)
 names(figs)
+slopes <- jn_plots(jn2, type = "slopes")
 ```
 
 ```{r eval = FALSE}
